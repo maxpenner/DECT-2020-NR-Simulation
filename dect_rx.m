@@ -10,12 +10,12 @@ classdef dect_rx < handle
         tx_handle;      % handle to tx for debugging
         ch_handle;      % handle to rf channel for debugging
 
-        STF_templates;  % for synchronization
+        STF_templates;  % for synchronization based on STF, both time and frequency domain
         harq_buf_40;    % these are the cbsbuffers used by matlab for harq operation, PCC 40 bits
         harq_buf_80;    % these are the cbsbuffers used by matlab for harq operation, PCC 80 bits
         harq_buf;       % these are the cbsbuffers used by matlab for harq operation, PDC
         
-        wiener;         % structure with data about wiener filter for channel estimation
+        wiener;         % structure with data about wiener filter for channel estimation, depends on channel environment
     end
     
     methods
@@ -29,10 +29,11 @@ classdef dect_rx < handle
             obj.tx_handle = [];
             obj.ch_handle = [];
 
-            % we only load the templates if they are need at any stage within the receiver
-            if mac_meta_arg.sto_config.use_sto_sync == true || mac_meta_arg.sto_config.fine.fractional_cfo == true
+            % we only load the templates if they are needed
+            if mac_meta_arg.synchronization.stf.active == true
                 obj.STF_templates = lib_rx.sync_STF_template(mac_meta_arg);
             end
+
             obj.harq_buf_40 = [];
             obj.harq_buf_80 = [];
             obj.harq_buf = [];
@@ -40,7 +41,7 @@ classdef dect_rx < handle
             obj.wiener = [];
         end
         
-        % We pass on the the samples as they are received by the antennas and we try to extract the PCC and PDC bits.
+        % We pass on the samples as they are received at the antennas and we try to extract the PCC and PDC bits.
         % It gets more complicated when using HARQ as calls to this function depend on each other.
         function [PCC_user_bits, PDC_user_bits] = demod_decode_packet(obj, samples_antenna_rx)
 
@@ -77,90 +78,52 @@ classdef dect_rx < handle
             N_RX                = obj.mac_meta.N_RX;
             oversampling        = obj.mac_meta.oversampling;
 
-            sto_config          = obj.mac_meta.sto_config;
-            cfo_config          = obj.mac_meta.cfo_config;
+            synchronization     = obj.mac_meta.synchronization;
 
-            use_ch_estim_type   = obj.mac_meta.use_ch_estim_type;
+            active_ch_estim_type = obj.mac_meta.active_ch_estim_type;
 
-            use_equalization    = obj.mac_meta.use_equalization;
+            active_equalization_detection = obj.mac_meta.active_equalization_detection;
 
             physical_resource_mapping_PCC_cell = obj.phy_4_5.physical_resource_mapping_PCC_cell;
             physical_resource_mapping_PDC_cell = obj.phy_4_5.physical_resource_mapping_PDC_cell;
             physical_resource_mapping_STF_cell = obj.phy_4_5.physical_resource_mapping_STF_cell;
             physical_resource_mapping_DRS_cell = obj.phy_4_5.physical_resource_mapping_DRS_cell;
 
-            %% sync of STO and extraction of N_eff_TX
-            if sto_config.use_sto_sync == true
+            %% sync of STO + CFO and extraction of N_eff_TX into STO_CFO_report
+            if synchronization.stf.active == true
 
                 % The number of samples received is larger than the number of samples in a packet.
-                % In this function, we try to synchronize the packet and extract the exact number of samples in the packet.
-                % In a real receiver, the number of samples is unknown, we would first have to decode the PCC which lies in the first few OFDM symbols.
-                [samples_antenna_rx_sto_cfo, STO_CFO_report] = lib_rx.sync_STO( verbose_,...
+                % In this function, we try to synchronize the packet and extract the exact number of samples in the packet, which we assume to be known.
+                % In a real receiver, the number of samples is unknown. We would first have to decode the PCC which lies in the first few OFDM symbols and extract that information.
+                [samples_antenna_rx_sto_cfo, STO_CFO_report] = lib_rx.sync_STF( verbose_,...
                                                                                 u,...
                                                                                 N_b_DFT,...
                                                                                 samples_antenna_rx,...
-                                                                                STF_templates_.time_domain,...
+                                                                                STF_templates_,...
                                                                                 n_packet_samples,...
                                                                                 oversampling,...
-                                                                                sto_config,...
-                                                                                cfo_config);
+                                                                                synchronization.stf.sto_config,...
+                                                                                synchronization.stf.cfo_config);
 
-                obj.packet_data.STO_report = STO_CFO_report;
+                obj.packet_data.STO_CFO_report = STO_CFO_report;
             else
-                % assume packet is synchronized and has the correct length
+                % assume the input samples are synchronized and have the correct length
                 samples_antenna_rx_sto_cfo = samples_antenna_rx;
-            end
-            
-            %% fractional CFO post STO sync and pre FFT based on STF
-            if cfo_config.use_cfo_fractional == true
-
-                % for fractional CFO correction we don't need the shape of STF, only length and number of patterns (derived from u)
-                n_STF_samples = numel(cell2mat(STF_templates_.time_domain(1)));
-
-                [samples_antenna_rx_sto_cfo, CFO_report] = lib_rx.sync_CFO_fractional(  verbose_,...
-                                                                                        samples_antenna_rx_sto_cfo,...
-                                                                                        n_STF_samples,...
-                                                                                        u,...
-                                                                                        cfo_config);
-
-                obj.packet_data.CFO_report = CFO_report;
             end
 
             %% OFDM demodulation a.k.a FFT
             % Switch back to frequency domain.
             % We use one version with subcarriers from oversampling removed and one with them still occupied.
-            % The second version is necessary if we have a very large integer CFO.
-            [antenna_streams_mapped_rev, antenna_streams_mapped_rev_with_os_carriers] = lib_6_generic_procedures.ofdm_signal_generation_Cyclic_prefix_insertion_rev(samples_antenna_rx_sto_cfo,...
-                                                                                                                                                                    k_b_OCC,...
-                                                                                                                                                                    N_PACKET_symb,...
-                                                                                                                                                                    N_RX,...
-                                                                                                                                                                    N_eff_TX,...
-                                                                                                                                                                    N_b_DFT,...
-                                                                                                                                                                    u,...
-                                                                                                                                                                    N_b_CP,...
-                                                                                                                                                                    oversampling);
-
-            %% sync of integer CFO post FFT based on STF
-            if cfo_config.use_cfo_integer == true
-
-                % sanity check
-                if cfo_config.use_cfo_fractional == false
-                    error('Correcting integer CFO, but not fractional CFO makes only sense for debugging purposes.');
-                end
-
-                [antenna_streams_mapped_rev, CFO_report_integer] = lib_rx.sync_CFO_integer( antenna_streams_mapped_rev_with_os_carriers,...
-                                                                                            STF_templates_.freq_domain,...
-                                                                                            N_RX,...
-                                                                                            N_eff_TX,...
-                                                                                            N_b_DFT,...
-                                                                                            oversampling,...
-                                                                                            cfo_config);
-
-                % add integer CFO to report
-                obj.packet_data.CFO_report_integer = CFO_report_integer;
-            else
-                % do nothing
-            end
+            % The second version might be necessary if we have a very large, uncorrected integer CFO.
+            [antenna_streams_mapped_rev, ~]= lib_6_generic_procedures.ofdm_signal_generation_Cyclic_prefix_insertion_rev(   samples_antenna_rx_sto_cfo,...
+                                                                                                                            k_b_OCC,...
+                                                                                                                            N_PACKET_symb,...
+                                                                                                                            N_RX,...
+                                                                                                                            N_eff_TX,...
+                                                                                                                            N_b_DFT,...
+                                                                                                                            u,...
+                                                                                                                            N_b_CP,...
+                                                                                                                            oversampling);
                                                                                                                     
             %% PCC decoding and packet data extraction
             % Decode PCC and extract all relevant data about the packet.
@@ -170,27 +133,26 @@ classdef dect_rx < handle
             % For now it is done down below together with the PDC.
             % TODO
 
-            %% residual CFO post FFT based on STF and DRS
-            if cfo_config.use_cfo_residual == true
+            %% residual CFO correction post FFT based on averaging DRS symbols
+            if synchronization.drs.cfo_config.active_residual == true
                 antenna_streams_mapped_rev = lib_rx.sync_CFO_residual(  antenna_streams_mapped_rev,...
                                                                         physical_resource_mapping_DRS_cell,...
                                                                         physical_resource_mapping_STF_cell,...
                                                                         N_RX,...
                                                                         N_eff_TX,...
-                                                                        cfo_config);
+                                                                        synchronization.drs.cfo_config);
             end
                                                                                                                     
             %% channel estimation
-
             % Now that we know the length of the packet from the PCC, we can determine a channel estimate.
             % Output is a cell(N_RX,1), each cell with a matrix of size N_b_DFT x N_PACKET_symb x N_TX.
             % For subcarriers which are unused the channel estimate can be NaN or +/- infinity.
-            if strcmp(use_ch_estim_type,'perfect') == true
+            if strcmp(active_ch_estim_type,'perfect') == true
 
                 % only for AWGN OR rayleigh/rician with doppler frequency of 0 and flat fading
                 ch_estim = lib_rx.channel_estimation_perfect(antenna_streams_mapped_rev, N_RX, N_eff_TX, ch_handle_);
 
-            elseif strcmp(use_ch_estim_type,'perfect SIMO') == true
+            elseif strcmp(active_ch_estim_type,'perfect SIMO') == true
                 
                 % this is a cheap trick: we take the time domain samples without noise, FFT and take the effective channel ceofficients as a channel estimate
                 antenna_streams_mapped_rev_no_noise = lib_6_generic_procedures.ofdm_signal_generation_Cyclic_prefix_insertion_rev(  ch_handle_.samples_antenna_rx_no_noise,...
@@ -205,26 +167,27 @@ classdef dect_rx < handle
                 
                 ch_estim = lib_rx.channel_estimation_perfect_SIMO(antenna_streams_mapped_rev_no_noise, N_RX, N_eff_TX, tx_handle_);  
 
-            elseif strcmp(use_ch_estim_type,'least squares') == true
+            elseif strcmp(active_ch_estim_type,'least squares') == true
 
                 % Zero forcing at the pilots and linear interpolation for subcarriers inbetween.
                 % It works without channel knowledge, but has a fairly large error floor.
                 % The error floor is comes from only considering the closest neighbours.
                 ch_estim = lib_rx.channel_estimation_ls(antenna_streams_mapped_rev, physical_resource_mapping_STF_cell, physical_resource_mapping_DRS_cell, N_RX, N_eff_TX);
 
-            elseif strcmp(use_ch_estim_type,'wiener') == true
+            elseif strcmp(active_ch_estim_type,'wiener') == true
 
-                % real world channel estimation based in precalculated wiener filter coefficients
+                % real world channel estimation based on precalculated wiener filter coefficients assuming worst-case channel conditions
                 ch_estim = lib_rx.channel_estimation_wiener(antenna_streams_mapped_rev, physical_resource_mapping_DRS_cell, wiener_, N_RX, N_eff_TX);
 
             else
-                error('Unknown channel estimation type %s.', use_ch_estim_type);
+                error('Unknown channel estimation type %s.', active_ch_estim_type);
             end
             
-            %% equalization
-            % With the known transmission mode and the channel estimate, we can now equalize the received data.
-            % This step is also often referred to as 'symbol detection'.
-            if use_equalization == true
+            %% equalization and detection
+            % With the known transmission mode and the channel estimate, we can now extract the binary data from the packet.
+            % Equalization here is understood as the inversion of channel effects at the subcarriers, usually paired with a symbol demapper.
+            % For MIMO detection with N_SS > 1 and symbol detection, equalization is not performed explicitly but is implicit part of the underlying algorithm.
+            if active_equalization_detection == true
                 
                 % SISO
                 if N_eff_TX == 1 && N_RX ==1

@@ -46,13 +46,28 @@ function [physical_resource_mapping_STF_cell] = STF(numerology, k_b_OCC, N_eff_T
     physical_resource_mapping_STF_cell(1,2) = {0};
     
     % base sequences
-    y_0_b1 = [-1i, -1i, -1, -1, 1i, -1i, 1i,...
-              -1i, -1i, 1i, 1i, -1, -1i, -1];
-    y_0_b2 = [1,-1,1,1,1,-1,1,1,1,1,-1,-1,1,-1,1,1,1,-1,1,1,-1,1,1,1,1,-1,1,-1];
-    y_0_b4 = [y_0_b2, y_0_b2];
-    y_0_b8 = [y_0_b4, y_0_b4];
-    y_0_b12 = [y_0_b4, y_0_b4, y_0_b4];
-    y_0_b16 = [y_0_b8, y_0_b8];
+%     y_0_b1 = [-1i, -1i, -1, -1, 1i, -1i, 1i,...
+%               -1i, -1i, 1i, 1i, -1, -1i, -1];
+%     y_0_b2 = [1,-1,1,1,1,-1,1,1,1,1,-1,-1,1,-1,1,1,1,-1,1,1,-1,1,1,1,1,-1,1,-1];
+%     y_0_b4 = [y_0_b2, y_0_b2];
+%     y_0_b8 = [y_0_b4, y_0_b4];
+%     y_0_b12 = [y_0_b4, y_0_b4, y_0_b4];
+%     y_0_b16 = [y_0_b8, y_0_b8];
+
+    % base sequences update from ETSI TS 103 636-3 V1.4.1 (2023-01)
+    y_0_b1 = exp(1i*pi/4) * [1, -1,1,1, -1,1,1, -1,1,1,1, -1, -1, -1];
+    y_0_b2 = exp(1i*pi/4) * [-1,1, -1,1,1, -1,1,1, -1,1,1,1, -1,1, -1, -1, -1,1, -1, -1, -1,1,1,1, -1, -1, -1, -1];
+    y_0_b4 = exp(1i*pi/4) * [-1, -1, -1, 1, -1, 1, -1, -1, 1, 1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, -1, 1, -1,...
+        1, 1, 1, -1, 1, -1, 1, 1, -1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, -1, 1, -1];
+
+    y_0_b4_r = (2*mod(1:numel(y_0_b4),2) - 1) .* fliplr(y_0_b4);
+    y_0_b8 = [y_0_b4 y_0_b4_r];
+
+    y_0_b8_r = (2*mod(1:numel(y_0_b8),2) - 1) .* fliplr(y_0_b8);
+    y_0_b16 = [y_0_b8 y_0_b8_r];
+
+    i = (0:1: (12*14-1));
+    y_0_b12 = y_0_b16(i + 2*14 + MATLAB_INDEX_SHIFT);
     
     % synchronization training data symbols
     % NOTE: cyclic rotation depending on the number of effective antennas is already included

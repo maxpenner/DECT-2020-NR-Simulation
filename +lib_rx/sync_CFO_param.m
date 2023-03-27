@@ -2,15 +2,7 @@ function [cfo_config] = sync_CFO_param(u)
 
     %% FRACTIONAL (pre FFT, based on STF)
 
-    % do we correct the CFO derived from the STF for each RX antenna individually (true) or do we average the CFO across all RX antennas (false)?
-    cfo_config.fractional.correct_all_antennas_individually = false;
-
     % SchmidlCox for an OFDM symbol with 4 repetitions instead of 2, capture range is +/- 2 subcarriers instead of +/- 1 subcarrier
-    cfo_config.type = 'SchmidlCox';
-
-    % It's best not to use BLUE, as it isn't stable around CFOs of 2, 6, 10 and 14 subcarriers.
-    % Also, the calculations are fairly complex and therefore not well controllable.
-    %cfo_config.type = 'BLUE';
 
     %% INTEGER (based on STF)
     %
@@ -24,7 +16,7 @@ function [cfo_config] = sync_CFO_param(u)
     %   With larger u, the subcarrier spacing is larger as well and the actual possible deviation becomes smaller.
     
     % get the maximum physical deviation in muliples of the subcarrie spacing in use
-    cfo_config.CFO_max_deviation_subcarrier_spacings = lib_rx.sync_CFO_max_estimation(u);
+    cfo_config.CFO_max_deviation_subcarrier_spacings = sync_CFO_max_estimation(u);
     
     % saw tooth of fractional CFO correction
     if cfo_config.CFO_max_deviation_subcarrier_spacings < 2
@@ -45,6 +37,27 @@ function [cfo_config] = sync_CFO_param(u)
     cfo_config.integer.candidate_values = -search_lim : 4 : search_lim;
 
     %% RESIDUAL (post FFT, based on STF and DRS)
-    % TODO
+    
+    % nothing to define here
+end
+
+function [CFO_max_deviation_subcarrier_spacings] = sync_CFO_max_estimation(u)
+
+    % sanity check
+    if ismember(u, [1 2 4 8]) == false
+        error('Unknown u.');
+    end
+
+    % subcarrier spacing
+    subc_spacing = 27000 * u;
+    
+    % maximum operational frequency for DECT-2020 NR
+    f_max = 6e9;
+
+    % according to table 5.5.2-1 in part 2, battery powered devices can have up to 30 ppm in extreme conditions
+    ppm_max = 30;
+    
+    % number of subcarriers that our signal can deviate (2 as we can have 30 ppm at the transmitter and 30 ppm at the receiver)
+    CFO_max_deviation_subcarrier_spacings = f_max * 2 * ppm_max/1e6 / subc_spacing;
 end
 

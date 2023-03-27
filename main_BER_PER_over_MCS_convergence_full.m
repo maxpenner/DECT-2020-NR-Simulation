@@ -9,7 +9,7 @@ close all;
 %      - u detection
 %      - STO synchronization (based on STF)
 %      - fractional CFO synchronization (based on STF, corrects into +/-2% range of subcarrier spacing)
-%      - integer CFO synchronization (based on STF, can correct 60ppm at 6GHZ and 27kHz subcarrier spacing)
+%      - integer CFO synchronization (based on STF, can correct 60 ppm at 6 GHz and 27 kHz subcarrier spacing)
 %      - b detection
 %      - residual CFO and SCO synchronization (based on DRS, residual offset due to Carrier Frequency Offset (CFO) and Sample Clock Offset (SCO))
 %      - Wiener Filter Channel Estimation (also part of Link-Level Simulations)
@@ -64,7 +64,8 @@ n_compare = 3;                          % how many batches do we compare?
 compare_convergence_threshold = 0.01;   % maximum relative change from batch to batch
 n_max_packets_snr = 0.50e6;             % we might never achieve convergence, in this case we have to limit simulation time
 per_abort_threshold = 1e-5;             % we are not interested in PERs below this threshold
-n_min_corruped_packets = 5;             % for very low PERs (<1e-4), a single packet can indicate convergence causing a bumby PER curve, therefore we need at least 5 erroneous packets
+n_min_corruped_packets = 5;             % For very low PERs (<1e-4), erroneous packets are rare and thus may incorrectly indicate constant PERs over several batches.
+                                        % This causes a bumby PER curve, therefore we need at least 5 erroneous packets.
 
 n_worker = 18;                                                  % how many workers? best case number this is the number of cpu-cores in your system (parfor)
 n_packets_per_worker_call = ceil(n_packets_per_batch/n_worker); % how many packets does a single worker calculate per batch
@@ -135,22 +136,27 @@ for mcs_index = mcs_index_vec
     mac_meta_rx = mac_meta_tx;
     mac_meta_rx.N_RX = 1;
 
-    % STO synchronization
-    mac_meta_rx.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
-    mac_meta_rx.sto_config.use_sto_sync = true;
-
-    % CFO synchronization
-    mac_meta_rx.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
-    mac_meta_rx.cfo_config.use_cfo_fractional = true;
-    mac_meta_rx.cfo_config.use_cfo_integer = true;
-    mac_meta_rx.cfo_config.use_cfo_residual = true;
+    % synchronization based on STF
+    mac_meta_rx.synchronization.stf.active = true;
+    if mac_meta_rx.synchronization.stf.active == true
+    
+        % STO (detection, coarse peak search, fine peak search)
+        mac_meta_rx.synchronization.stf.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
+        
+        % CFO (fractional, integer)
+        mac_meta_rx.synchronization.stf.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
+        mac_meta_rx.synchronization.stf.cfo_config.active_fractional = true;
+        mac_meta_rx.synchronization.stf.cfo_config.active_integer = true;
+    end
+    
+    % synchronization based on DRS (residual CFO)
+    mac_meta_rx.synchronization.drs.cfo_config.active_residual = true;
 
     % channel estimation
-    mac_meta_rx.use_ch_estim_noise_type = 'zero';
-    mac_meta_rx.use_ch_estim_type = 'wiener';
+    mac_meta_rx.active_ch_estim_type = 'wiener';
     
     % channel equalization
-    mac_meta_rx.use_equalization = true;
+    mac_meta_rx.active_equalization_detection = true;
 
     % create rx
     rxx = dect_rx(verbose, mac_meta_rx);
@@ -173,7 +179,7 @@ for mcs_index = mcs_index_vec
         current_snr = snr_db_vec(i);
         
         % extract variables for wiener weights
-        if strcmp(rxx.mac_meta.use_ch_estim_type,'wiener') == true
+        if strcmp(rxx.mac_meta.active_ch_estim_type,'wiener') == true
             physical_resource_mapping_DRS_cell  = txx.phy_4_5.physical_resource_mapping_DRS_cell;
             N_b_DFT                             = txx.phy_4_5.numerology.N_b_DFT;
             N_PACKET_symb                       = txx.phy_4_5.N_PACKET_symb;
@@ -327,10 +333,10 @@ for mcs_index = mcs_index_vec
                         samples_antenna_tx = tx.generate_packet(PCC_user_bits, PDC_user_bits);
 
                         % random STO after resampling at tx and before resamples at rx
-                        sto_actual = ceil( (10+2*rand(1,1)) * rx.mac_meta.sto_config.n_samples_STF_b_os * L/M);
+                        sto_actual = ceil((10+2*rand(1,1)) * rx.mac_meta.synchronization.stf.sto_config.n_samples_STF_b_os * L/M);
 
                         % random fractional + integer CFO
-                        cfo_actual      = lib_util.pm_rand(rx.mac_meta.cfo_config.CFO_max_deviation_subcarrier_spacings);
+                        cfo_actual      = lib_util.pm_rand(rx.mac_meta.synchronization.stf.cfo_config.CFO_max_deviation_subcarrier_spacings);
                         cfo_actual_norm = cfo_actual * (1/(tx.phy_4_5.numerology.N_b_DFT*tx.mac_meta.oversampling)) * M/L;
 
                         % random phase
@@ -389,10 +395,10 @@ for mcs_index = mcs_index_vec
                         [PCC_user_bits_recovered, PDC_user_bits_recovered] = rx.demod_decode_packet(samples_antenna_rx);
 
                         % measure the STO sync performance, but of course only if the synchronization is turned on
-                        if isfield(rx.packet_data,'STO_report')
+                        if isfield(rx.packet_data,'STO_CFO_report')
                             sto_DECT_domain = floor(sto_actual*M/L) + 1;
-                            sto_coarse_error = min(rx.packet_data.STO_report.max_idx_coarse - sto_DECT_domain);
-                            sto_fine_error = min(rx.packet_data.STO_report.max_idx_fine - sto_DECT_domain);
+                            sto_coarse_error = min(rx.packet_data.STO_CFO_report.max_idx_coarse - sto_DECT_domain);
+                            sto_fine_error = min(rx.packet_data.STO_CFO_report.max_idx_fine - sto_DECT_domain);
                             STO_hist_coarse = STO_hist_coarse + (histcounts(sto_coarse_error, edges))';
                             STO_hist_fine = STO_hist_fine + (histcounts(sto_fine_error, edges))';
                         end

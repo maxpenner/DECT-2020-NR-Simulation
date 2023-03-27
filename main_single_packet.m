@@ -41,6 +41,25 @@ end
 verbose = 2;                                        % show data during execution: 0 false, 1 only text, 2 text + plots
 tx = dect_tx(verbose, mac_meta_tx);
 
+%% generate tx signal
+
+% generate random PCC bits
+PCC_user_bits = [];
+if mac_meta_tx.PLCF_type == 1
+    PCC_user_bits = randi([0 1], 40, 1);
+elseif mac_meta_tx.PLCF_type == 2
+    PCC_user_bits = randi([0 1], 80, 1);
+end
+
+% how many PDC bits does tx need?
+N_TB_bits = tx.phy_4_5.N_TB_bits;
+
+% generate bits
+PDC_user_bits = randi([0 1], N_TB_bits, 1);
+
+% let tx create the packet
+samples_antenna_tx = tx.generate_packet(PCC_user_bits, PDC_user_bits);
+
 %% create rx
 
 % assume the receiver has full knowledge of meta data at the transmitter (usually extracted from STF+PCC)
@@ -49,21 +68,27 @@ mac_meta_rx = mac_meta_tx;
 % number of antennas at the receiver
 mac_meta_rx.N_RX = 2;
 
-% STO synchronization parameters (see +lib_rx/sync_STO.m)
-mac_meta_rx.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
-mac_meta_rx.sto_config.use_sto_sync = true;
+% synchronization based on STF
+mac_meta_rx.synchronization.stf.active = true;
+if mac_meta_rx.synchronization.stf.active == true
 
-% CFO synchronization parameters (see +lib_rx/sync_CFO.m)
-mac_meta_rx.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
-mac_meta_rx.cfo_config.use_cfo_fractional = true;
-mac_meta_rx.cfo_config.use_cfo_integer = true;
-mac_meta_rx.cfo_config.use_cfo_residual = true;
+    % STO (detection, coarse peak search, fine peak search)
+    mac_meta_rx.synchronization.stf.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
+    
+    % CFO (fractional, integer)
+    mac_meta_rx.synchronization.stf.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
+    mac_meta_rx.synchronization.stf.cfo_config.active_fractional = true;
+    mac_meta_rx.synchronization.stf.cfo_config.active_integer = true;
+end
+
+% synchronization based on DRS (residual CFO)
+mac_meta_rx.synchronization.drs.cfo_config.active_residual = true;
 
 % channel estimation parameters (see +lib_rx/channel_estimation_wiener.m)
-mac_meta_rx.use_ch_estim_type = 'wiener';
+mac_meta_rx.active_ch_estim_type = 'wiener';
 
 % if we are using a wiener filter for channel esimation
-if strcmp(mac_meta_rx.use_ch_estim_type,'wiener') == true
+if strcmp(mac_meta_rx.active_ch_estim_type,'wiener') == true
 
     % best case assumption for SNR, worst case assumptions for doppler and delay spread
     noise_estim_wiener               	= 1/10^(30/10);
@@ -81,14 +106,14 @@ if strcmp(mac_meta_rx.use_ch_estim_type,'wiener') == true
                                                         tau_rms_sec_wiener);
 end
 
-% channel equalization (see dect_rx.m)
-mac_meta_rx.use_equalization = true;
+% channel equalization/detection (see dect_rx.m)
+mac_meta_rx.active_equalization_detection = true;
 
 % create actual receiver
 rx = dect_rx(verbose, mac_meta_rx);
 
 % save receiver independent wiener coefficients
-if strcmp(rx.mac_meta.use_ch_estim_type,'wiener') == true
+if strcmp(rx.mac_meta.active_ch_estim_type,'wiener') == true
     rx.wiener = wiener;
 end
 
@@ -111,14 +136,14 @@ ch.N_TX                 = N_TX;
 ch.N_RX                 = N_RX;
 ch.awgn_random_source   = 'global';
 ch.awgn_randomstream    = RandStream('mt19937ar','Seed', randi(1e9,[1 1]));
-ch.d_sto                = 123 + 10*rx.mac_meta.sto_config.n_samples_STF_b_os;
+ch.d_sto                = 123 + 2*size(samples_antenna_tx, 1);
 ch.d_cfo                = 1.7*(1/(tx.phy_4_5.numerology.N_b_DFT*tx.mac_meta.oversampling));
 ch.d_err_phase          = deg2rad(123);
 ch.r_random_source      = 'global';
 ch.r_seed    	        = randi(1e9,[1 1]);
-ch.r_sto                = 123 + 10*rx.mac_meta.sto_config.n_samples_STF_b_os;
-ch.r_cfo                = 13.75*(1/(tx.phy_4_5.numerology.N_b_DFT*tx.mac_meta.oversampling));
-ch.r_err_phase          = deg2rad(123);
+ch.r_sto                = ch.d_sto;
+ch.r_cfo                = ch.d_cfo;
+ch.r_err_phase          = ch.d_err_phase;
 ch.r_samp_rate          = tx.phy_4_5.numerology.B_u_b_DFT*tx.mac_meta.oversampling;
 ch.r_max_doppler        = 1.946;                            % 1.946 19.458
 ch.r_type   	        = 'TDL-iii';
@@ -131,25 +156,6 @@ ch.init_rayleigh_rician_channel();
 %% give rx handles so it can debug, e.g. perfect channel knowledge
 rx.tx_handle = tx;
 rx.ch_handle = ch;
-
-%% generate tx signal
-
-% generate random PCC bits
-PCC_user_bits = [];
-if mac_meta_tx.PLCF_type == 1
-    PCC_user_bits = randi([0 1], 40, 1);
-elseif mac_meta_tx.PLCF_type == 2
-    PCC_user_bits = randi([0 1], 80, 1);
-end
-
-% how many PDC bits does tx need?
-N_TB_bits = tx.phy_4_5.N_TB_bits;
-
-% generate bits
-PDC_user_bits = randi([0 1], N_TB_bits, 1);
-
-% let tx create the packet
-samples_antenna_tx = tx.generate_packet(PCC_user_bits, PDC_user_bits);
 
 %% pass tx signal through channel and yield rx signal (this step can be skipped)
 samples_antenna_rx = ch.pass_samples(samples_antenna_tx, 0);

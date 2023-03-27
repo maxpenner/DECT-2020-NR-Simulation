@@ -84,22 +84,27 @@ for mcs_index = mcs_index_vec
     mac_meta_rx = mac_meta_tx;
     mac_meta_rx.N_RX = 1;
 
-    % STO synchronization
-    mac_meta_rx.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
-    mac_meta_rx.sto_config.use_sto_sync = false;
-
-    % CFO synchronization
-    mac_meta_rx.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
-    mac_meta_rx.cfo_config.use_cfo_fractional = false;
-    mac_meta_rx.cfo_config.use_cfo_integer = false;
-    mac_meta_rx.cfo_config.use_cfo_residual = false;
+    % synchronization based on STF
+    mac_meta_rx.synchronization.stf.active = false;
+    if mac_meta_rx.synchronization.stf.active == true
+    
+        % STO (detection, coarse peak search, fine peak search)
+        mac_meta_rx.synchronization.stf.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
+        
+        % CFO (fractional, integer)
+        mac_meta_rx.synchronization.stf.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
+        mac_meta_rx.synchronization.stf.cfo_config.active_fractional = false;
+        mac_meta_rx.synchronization.stf.cfo_config.active_integer = false;
+    end
+    
+    % synchronization based on DRS (residual CFO)
+    mac_meta_rx.synchronization.drs.cfo_config.active_residual = false;
 
     % channel estimation
-    mac_meta_rx.use_ch_estim_noise_type = 'zero';
-    mac_meta_rx.use_ch_estim_type = 'wiener';
+    mac_meta_rx.active_ch_estim_type = 'wiener';
     
     % channel equalization
-    mac_meta_rx.use_equalization = true;
+    mac_meta_rx.active_equalization_detection = true;
 
     % create rx
     rxx = dect_rx(verbose, mac_meta_rx);
@@ -153,7 +158,7 @@ for mcs_index = mcs_index_vec
         n_packets_PDC_error = 0;
                 
         % extract variables for wiener weights
-        if strcmp(rx.mac_meta.use_ch_estim_type,'wiener') == true
+        if strcmp(rx.mac_meta.active_ch_estim_type,'wiener') == true
             physical_resource_mapping_DRS_cell  = tx.phy_4_5.physical_resource_mapping_DRS_cell;
             N_b_DFT                             = tx.phy_4_5.numerology.N_b_DFT;
             N_PACKET_symb                       = tx.phy_4_5.N_PACKET_symb;
@@ -185,9 +190,9 @@ for mcs_index = mcs_index_vec
         ch.N_RX               	= N_RX;
         ch.awgn_random_source   = 'global';
         ch.awgn_randomstream 	= RandStream('mt19937ar','Seed', randi(1e9,[1 1]));
-        ch.d_sto                = 5*rx.mac_meta.sto_config.n_samples_STF_b_os;
-        ch.d_cfo               	= 1.7*(1/(tx.phy_4_5.numerology.N_b_DFT*tx.mac_meta.oversampling));
-        ch.d_err_phase         	= deg2rad(123);
+        ch.d_sto                = 0;
+        ch.d_cfo               	= 0;
+        ch.d_err_phase         	= 0;
         ch.r_random_source      = 'global';
         ch.r_seed    	        = randi(1e9,[1 1]);
         ch.r_sto                = 0;

@@ -45,7 +45,8 @@ n_compare = 4;                          % how many batches do we compare?
 compare_convergence_threshold = 0.01;   % maximum relative change from batch to batch
 n_max_packets_snr = 0.6e6;           	% we might never achieve convergence, in this case we have to limit simulation time
 per_abort_threshold = 1e-5;             % we are not interested in PERs below this threshold
-n_min_corruped_packets = 5;             % for very low PERs (<1e-4), a single packet can indicate convergence causing a bumby PER curve, therefore we need at least 5 erroneous packets
+n_min_corruped_packets = 5;             % For very low PERs (<1e-4), erroneous packets are rare and thus may incorrectly indicate constant PERs over several batches.
+                                        % This causes a bumby PER curve, therefore we need at least 5 erroneous packets.
 
 n_worker = 17;                                                  % how many workers? best case number this is the number of cpu-cores in your system (parfor)
 n_packets_per_worker_call = ceil(n_packets_per_batch/n_worker); % how many packets does a single worker calculate per batch
@@ -95,22 +96,27 @@ for mcs_index = mcs_index_vec
     mac_meta_rx = mac_meta_tx;
     mac_meta_rx.N_RX = 1;
 
-    % STO synchronization
-    mac_meta_rx.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
-    mac_meta_rx.sto_config.use_sto_sync = false;
-
-    % CFO synchronization
-    mac_meta_rx.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
-    mac_meta_rx.cfo_config.use_cfo_fractional = false;
-    mac_meta_rx.cfo_config.use_cfo_integer = false;
-    mac_meta_rx.cfo_config.use_cfo_residual = false;
+    % synchronization based on STF
+    mac_meta_rx.synchronization.stf.active = false;
+    if mac_meta_rx.synchronization.stf.active == true
+    
+        % STO (detection, coarse peak search, fine peak search)
+        mac_meta_rx.synchronization.stf.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
+        
+        % CFO (fractional, integer)
+        mac_meta_rx.synchronization.stf.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
+        mac_meta_rx.synchronization.stf.cfo_config.active_fractional = false;
+        mac_meta_rx.synchronization.stf.cfo_config.active_integer = false;
+    end
+    
+    % synchronization based on DRS (residual CFO)
+    mac_meta_rx.synchronization.drs.cfo_config.active_residual = false;
 
     % channel estimation
-    mac_meta_rx.use_ch_estim_noise_type = 'zero';
-    mac_meta_rx.use_ch_estim_type = 'wiener';
+    mac_meta_rx.active_ch_estim_type = 'wiener';
     
     % channel equalization
-    mac_meta_rx.use_equalization = true;
+    mac_meta_rx.active_equalization_detection = true;
 
     % create rx
     rxx = dect_rx(verbose, mac_meta_rx);
@@ -133,7 +139,7 @@ for mcs_index = mcs_index_vec
         current_snr = snr_db_vec(i);
         
         % extract variables for wiener weights
-        if strcmp(rxx.mac_meta.use_ch_estim_type,'wiener') == true
+        if strcmp(rxx.mac_meta.active_ch_estim_type,'wiener') == true
             physical_resource_mapping_DRS_cell  = txx.phy_4_5.physical_resource_mapping_DRS_cell;
             N_b_DFT                             = txx.phy_4_5.numerology.N_b_DFT;
             N_PACKET_symb                       = txx.phy_4_5.N_PACKET_symb;
@@ -209,9 +215,9 @@ for mcs_index = mcs_index_vec
                 ch.N_RX               	= N_RX;
                 ch.awgn_random_source   = 'global';
                 ch.awgn_randomstream 	= RandStream('mt19937ar','Seed', randi(1e9,[1 1]));
-                ch.d_sto                = 5*rx.mac_meta.sto_config.n_samples_STF_b_os;
-                ch.d_cfo               	= 1.7*(1/(tx.phy_4_5.numerology.N_b_DFT*tx.mac_meta.oversampling));
-                ch.d_err_phase         	= deg2rad(123);
+                ch.d_sto                = 0;
+                ch.d_cfo               	= 0;
+                ch.d_err_phase         	= 0;
                 ch.r_random_source      = 'global';
                 ch.r_seed    	        = randi(1e9,[1 1]);
                 ch.r_sto                = 0;

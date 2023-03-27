@@ -1,71 +1,67 @@
-function [antenna_streams_mapped_rev, CFO_report_integer] = sync_CFO_integer(   antenna_streams_mapped_rev_with_os_carriers,...
-                                                                                STO_templates_freq_domain,...
-                                                                                N_RX,...
-                                                                                N_eff_TX,...
-                                                                                N_b_DFT,...
-                                                                                oversampling,...
-                                                                                cfo_config)
+function [cfo_report] = sync_CFO_integer(   samples_antenna_sto,...
+                                            STO_templates_freq_domain,...
+                                            N_b_DFT,...
+                                            oversampling,...
+                                            sto_config,...
+                                            cfo_config)
 
-    %% extract the correct STF
+    %% transform from time domain samples into frequency domain
 
-    switch N_eff_TX
-        case 1
-            STF_values_freq_domain = STO_templates_freq_domain{1};
-        case 2
-            STF_values_freq_domain = STO_templates_freq_domain{2};
-        case 4
-            STF_values_freq_domain = STO_templates_freq_domain{3};
-        case 8
-            STF_values_freq_domain = STO_templates_freq_domain{4};
-        otherwise
-            error('Unknow N_eff_TX.');
-    end
+    % remove cp
+    samples_antenna_sto_no_cp = samples_antenna_sto(sto_config.n_samples_STF_cp_only_b_os + 1 : end, :);
+
+    % transform into frequency domain
+    samples_antenna_sto_freq_os = fft(samples_antenna_sto_no_cp);
+    samples_antenna_sto_freq_os = fftshift(samples_antenna_sto_freq_os, 1);
+
+    %% at this point, we don't know N_eff_TX yet, so we can use any STF template as we have to perform a simple power detection
+
+    STF_values_freq_domain = STO_templates_freq_domain{1};
+
+    % Matlab saves mirrored version compared to DECT-2020 NR standard
+    STF_values_freq_domain = flipud(STF_values_freq_domain);
 
     %% we need to expand the STF template if oversampling is used
 
     % zeros at spectrum edge
     n_oversampling_zeros = (oversampling-1)*N_b_DFT/2;
-
-    % when oversampling, our signal must remain in the center of the spectrum
-    os_idx_start = n_oversampling_zeros + 1;
-    os_idx_end = os_idx_start + N_b_DFT - 1;
-
     STF_values_freq_domain = [zeros(n_oversampling_zeros,1); STF_values_freq_domain; zeros(n_oversampling_zeros,1)];
 
     %% now we have to test for each antenna, which integer CFO makes most sense
 
     % one metric value per possible integer CFO per RX antenna
+    N_RX = size(samples_antenna_sto, 2);
     metric = zeros(numel(cfo_config.integer.candidate_values), N_RX);
 
     % go over each rx antenna
     for i=1:1:N_RX
 
-        % extract received frequency domain samples for RX antenna i
-        transmit_streams_rev_i = cell2mat(antenna_streams_mapped_rev_with_os_carriers(i));
-
         % we only need the STF symbol
-        STF_recv = transmit_streams_rev_i(:,1);
+        STF_this_antenna = samples_antenna_sto_freq_os(:,i);
 
-        % Try for each possible frequency offset.
-        % In Matlab, when we circshift with a positiv value, we push subcarriers "down" or towards higher indices.
-        % For DECT-2020, this corrsponds to a negative integer CFO.
-        % Our matrices use the same layout as DECT-2020, which is why we also experience a negative integer CFO.
+        % try for each possible frequency offset
         idx = 1;
         for cfo_candidate = cfo_config.integer.candidate_values
 
-            % shift preamble
-            % when cfo_candidate is negative, we assume a negative integer CFO, so we have to push our STF "down" (invert cfo_candidate)
-            % when cfo_candidate is positive, we assume a positive integer CFO, so we have to push our STF "up" (invert cfo_candidate)
-            STF_values_freq_domain_shifted = circshift(STF_values_freq_domain, -cfo_candidate);
+            % Shift spectrum:
+            %
+            % Within the rf channel, the cfo is applied this way:
+            %
+            %       samples_out.*exp(1i*2*pi*cfo*time_base);
+            %
+            % When cfo is negative, the spectrum is shifted towards low indices.
+            % For instance, when DC lies at index 33 with cfo=0, it will be at index 32 when cfo=-1*subcarrier_spacing.
+            %
+            % when cfo_candidate is negative, assume a negative integer CFO, so we have to push our STF towards high indices to compensate the CFO.
+            % when cfo_candidate is positive, assume a positive integer CFO, so we have to push our STF towards low indices to compensate the CFO.
+            STF_this_antenna_shifted = circshift(STF_this_antenna, -cfo_candidate);
 
             % calculate metrix
-            metric(idx, i) = sum(abs(STF_values_freq_domain_shifted .* conj(STF_recv)));
+            metric(idx, i) = sum(abs(STF_values_freq_domain .* conj(STF_this_antenna_shifted)));
 
             idx = idx+1;
         end
     end
-
-    %% 
 
     %% combine the results from all antennas and determine the most likely integer CFO
 
@@ -76,60 +72,6 @@ function [antenna_streams_mapped_rev, CFO_report_integer] = sync_CFO_integer(   
     [~, CFO_report_integer_index] = max(metric);
 
     % extract corresponding CFO value
-    CFO_report_integer = cfo_config.integer.candidate_values(CFO_report_integer_index);
-
-    %% the integer CFO causes a phase rotation between the OFDM symbols, which we need to determine
-
-    % number of symbols in the packet
-    N_PACKET_symb = size(transmit_streams_rev_i,2);
-
-    % The equation for the symbol to symbol phase rotation is: 2*pi*(1 + 8/64)*integer_CFO_in_muliples_of_subcarriers.
-    % 8/64 is the ratio between cyclic prefic and symbol lenght.
-    sym2sym_rot = 2*pi*(1+8/64)*CFO_report_integer;
-
-    % this line can be used for debugging to see by how much the symbols are rorated
-    %sym2sym_rot_deg = rad2deg(sym2sym_rot);
-
-    % generate rotation for entire frame
-    phase_derotation = 0 : 1 : (N_PACKET_symb-1);
-    phase_derotation = phase_derotation*sym2sym_rot;
-    phase_derotation = exp(-1i*phase_derotation);
-    phase_derotation = repmat(phase_derotation, N_b_DFT, 1);
-
-    % this line can be used for debugging to see by how much the symbols are rorated
-    %phase_derotation_deg = rad2deg(angle(phase_derotation));
-
-    %% correct the CFO, remove os carriers, derotate phase and write into new container
-
-    % output container without os carriers
-    antenna_streams_mapped_rev = cell(N_RX,1);
-
-    % go over each rx antenna
-    for i=1:1:N_RX
-
-        % extract received frequency domain samples for RX antenna i
-        transmit_streams_rev_i = cell2mat(antenna_streams_mapped_rev_with_os_carriers(i));
-
-        % is CFO_report_integer is negative, we need to shift everthing "up" to correct the CFO
-        % is CFO_report_integer is postitve, we need to shift everthing "down" to correct the CFO
-        transmit_streams_rev_i = circshift(transmit_streams_rev_i, CFO_report_integer, 1);
-
-        % remove oversampling subcarriers
-        transmit_streams_rev_i = transmit_streams_rev_i(os_idx_start : os_idx_end, :);
-
-        % this line can be used for debugging to see by how much the symbols are rorated
-        %temp0 = tx_handle.packet_data.antenna_streams_mapped{1}./transmit_streams_rev_i;
-        %temp1 = rad2deg(angle(temp0));
-
-        % derotate symbols
-        transmit_streams_rev_i = transmit_streams_rev_i.*phase_derotation;
-
-        % this line can be used for debugging to see by how much the symbols are rorated
-        %temp2 = tx_handle.packet_data.antenna_streams_mapped{1}./transmit_streams_rev_i;
-        %temp3 = rad2deg(angle(temp2));
-
-        % overwrite
-        antenna_streams_mapped_rev(i) = {transmit_streams_rev_i};
-    end
+    cfo_report = cfo_config.integer.candidate_values(CFO_report_integer_index);
 end
 
