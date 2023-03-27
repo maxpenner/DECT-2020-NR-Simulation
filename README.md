@@ -40,6 +40,3 @@ Interpolated average path gains for doubly selective channel.
 <p align="center">
   <img src="./pics/Channel_Interpolation.jpg" width="700">
 </p>
-
-## Contact
-If you have any questions, feel free to contact me *(maxim.penner@ikt.uni-hannover.de)*.
