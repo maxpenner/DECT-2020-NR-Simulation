@@ -30,7 +30,7 @@ function [phy_4_5] = run_chapter_4_5(verbose, mac_meta)
     k_b_OCC = lib_4_physical_layer_principles.physical_resources(numerology.N_b_OCC);
 
     % 5.1
-    N_PACKET_symb = lib_5_physical_layer_transmissions.Transmission_packet_structure(numerology, PacketLengthType, PacketLength, tm_mode.N_eff_TX);
+    N_PACKET_symb = lib_5_physical_layer_transmissions.Transmission_packet_structure(numerology, PacketLengthType, PacketLength, tm_mode.N_eff_TX, u);
 
     % 5.2.2
     [physical_resource_mapping_STF_cell] = lib_5_physical_layer_transmissions.STF(numerology, k_b_OCC, tm_mode.N_eff_TX, b);

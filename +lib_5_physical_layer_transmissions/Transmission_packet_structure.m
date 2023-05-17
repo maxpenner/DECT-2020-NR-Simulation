@@ -1,4 +1,4 @@
-function [N_PACKET_symb] = Transmission_packet_structure(numerology, PacketLengthType, PacketLength, N_eff_TX)
+function [N_PACKET_symb] = Transmission_packet_structure(numerology, PacketLengthType, PacketLength, N_eff_TX, u)
 
     switch PacketLengthType
         case 0
@@ -9,24 +9,15 @@ function [N_PACKET_symb] = Transmission_packet_structure(numerology, PacketLengt
             error('PacketLengthType is %d, but it must be 0 or 1.', PacketLengthType);
     end
 
-    if N_eff_TX >= 4
+    % minimum length to accomodate two DRS symbols per transmit stream
+    if N_eff_TX >= 4 && N_PACKET_symb < 15
+        error('For N_eff_TX == 4 at least 15 symbols are required, see 5.1 Transmission packet structure.');
+    end
 
-%         % according to standard we need only 15 symbols
-%         if N_PACKET_symb < 15
-%             error('For N_eff_TX >= 4 at least 15 symbols are required, see 5.1 Transmission packet structure.');
-%         end
-
-        % this is probably an error in the TS, we actually need at least 15 or 20 OFDM symbols
-        if N_eff_TX == 4
-            if N_PACKET_symb < 15
-                error('For N_eff_TX == 4 at least 15 symbols are required, see 5.1 Transmission packet structure.');
-            end
-        elseif N_eff_TX == 8
-            if N_PACKET_symb < 20 || mod(N_PACKET_symb, 10) ~= 0
-                error('For N_eff_TX == 8 at least 20 symbols are required and N_PACKET_symb must be a multiple of 10, see 5.1 Transmission packet structure.');
-            end
-        else
-            error("N_eff_TX unknown");
+    % collision between first zero-symbol in GI and final DRS symbol
+    if u == 8 && N_eff_TX == 8
+        if N_PACKET_symb < 20 || mod(N_PACKET_symb, 10) ~= 0
+            error('For u=8 and N_eff_TX=8 at least 20 symbols are required and N_PACKET_symb must be a multiple of 10, see 5.1 Transmission packet structure.');
         end
     end
     
