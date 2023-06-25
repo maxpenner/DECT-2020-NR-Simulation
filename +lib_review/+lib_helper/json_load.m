@@ -1,4 +1,4 @@
-function json_struct = load_json(folder_filename)
+function json_struct = json_load(folder_filename)
 
     fid = fopen(folder_filename);
     raw = fread(fid,inf);

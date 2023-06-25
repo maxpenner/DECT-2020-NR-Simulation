@@ -1,20 +1,31 @@
-function [] = packets_RX_FEC(filefolder, filename)
+clear all;
+close all;
+clc;
 
-%   This is merely a function to plot PER results from C++.
-%
-%   The overall idea is:
-%
-%   1) Confirm standard compliant FEC at TX with the function lib_review.packets_TX.
-%
-%   2) There is no standard compliant FEC at RX, it is up to the implementation.
-%      Therefore, simulate FEC decoding performance in C++, i.e. PER, and plot results with this function.
-%
-%   3) The results then should be comparable to the FEC decoding performance of Matlab.
-%
+% script to plot Turbo Decoder results from C++
+
+warning on
+
+% load all json filenames
+[filenames, n_files] = lib_util.get_all_filenames('results');
+
+% process each file
+for i=1:1:n_files
+
+    % extract file folder and name
+    file_struct = filenames(i);
+    filefolder = file_struct.folder;
+    filename = file_struct.name;
+    disp(file_struct.name)
+
+    plot_single_file(filefolder, filename)
+end
+
+function plot_single_file(filefolder, filename)
 
     ffn = fullfile(filefolder, filename);
     
-    json_struct = lib_review.load_json(ffn);
+    json_struct = lib_review.lib_helper.json_load(ffn);
 
     identifier                  = json_struct.identifier;
     radio_device_class_string   = json_struct.radio_device_class_string;

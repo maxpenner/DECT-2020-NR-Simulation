@@ -1,4 +1,4 @@
-function [] = save_json(folder_filename, json_str)
+function [] = json_save(folder_filename, json_str)
 
     fid = fopen(folder_filename,'wt');
     fprintf(fid, json_str);
