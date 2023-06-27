@@ -33,7 +33,7 @@ function [] = TX_compare_plot(  filename, ...
         clf()
 
         % compare real part
-        subplot(4,1,1)
+        subplot(5,1,1)
         plot(real(samples_antenna_tx_matlab_resampled(:,i)));
         hold on
         plot(real(samples_antenna_tx_cpp(:,i)), 'r');
@@ -43,24 +43,28 @@ function [] = TX_compare_plot(  filename, ...
         set(t,'Interpreter','none');
 
         % compare imag part
-        subplot(4,1,2)
+        subplot(5,1,2)
         plot(imag(samples_antenna_tx_matlab_resampled(:,i)));
         hold on
         plot(imag(samples_antenna_tx_cpp(:,i)), 'r');
         legend('Matlab', 'C++');
 
         % compare real before and after resampling
-        subplot(4,1,3)
+        subplot(5,1,3)
         plot(t_dect, real(samples_antenna_tx_matlab(:,i)));
         hold on
         plot(t_hw, real(samples_antenna_tx_cpp(:,i)), 'r');
         legend('Matlab before resampling', 'C++ resampled');
 
         % compare imag before and after resampling
-        subplot(4,1,4)
+        subplot(5,1,4)
         plot(t_dect, imag(samples_antenna_tx_matlab(:,i)));
         hold on
         plot(t_hw, imag(samples_antenna_tx_cpp(:,i)), 'r');
         legend('Matlab before resampling', 'C++ resampled');
+
+        % observe frequency shift
+        subplot(5,1,5)
+        spectrogram(sum(samples_antenna_tx_cpp, 2))
     end
 end
