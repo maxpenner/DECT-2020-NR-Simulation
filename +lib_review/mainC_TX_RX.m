@@ -33,8 +33,7 @@ tx_to_sync_points_optimal_idx = lib_review.lib_helper.TX_compare_sync_points(   
 
 %% check every tx packet numerically, and then compare with rx packet
 
-IQ_snr_dB_vec = ones(numel(tx_filenames), 1) * -1e9;
-BER_PCC_vec = ones(numel(tx_filenames), 1) * -1e9;
+results = cell(numel(tx_filenames), 1);
 
 plot_every_packet = false;
 
@@ -72,42 +71,59 @@ for i=1:1:numel(tx_filenames)
     rx_json_struct = lib_review.lib_helper.json_load(ffn);
 
     % first compare packets numerically
-    [samples_antenna_rx_cpp, ...
-     IQ_err_max_idx, ...
-     IQ_snr_dB, ...
-     BER_PCC] = lib_review.lib_helper.TX_RX_compare_numerically(tx, samples_antenna_tx_matlab, rx_json_struct);
+    result_signal = lib_review.lib_helper.TX_RX_compare_numerically(tx, samples_antenna_tx_matlab, rx_json_struct);
+
+    % save
+    results(i) = {result_signal};
 
     % then plot
     if plot_every_packet == true
-        lib_review.lib_helper.TX_RX_compare_plot(samples_antenna_tx_matlab, samples_antenna_rx_cpp, IQ_err_max_idx);
+        lib_review.lib_helper.TX_RX_compare_plot(samples_antenna_tx_matlab, result_signal.samples_antenna_rx_cpp, result_signal.IQ_err_max_idx);
     end
-
-    % save for later plot
-    IQ_snr_dB_vec(i) = IQ_snr_dB;
-    BER_PCC_vec(i) = BER_PCC;
 end
 
-%% plot SNR
+figure(1)
+clf()
+plot_snr_hist(results, "IQ_snr_dB");
 
-% remove any very low SNR
-IQ_snr_dB_vec( IQ_snr_dB_vec < -1e-5) = [];
-
-% plot and SNR histogramm
 figure(2)
-histogram(IQ_snr_dB_vec)
-xlim([0 max(15, 1.5*max(IQ_snr_dB_vec))])
-title_str = "SNR measured for " + num2str(numel(IQ_snr_dB_vec)) +  " files";
-title(title_str);
+clf()
+subplot(2,1,1)
+plot_snr_hist(results, "PCC_snr_dB");
+subplot(2,1,2)
+plot_ber_hist(results, "BER_PCC")
 
-%% plot BER of PCC
-
-% remove any very low SNR
-BER_PCC_vec( BER_PCC_vec < -1e-5) = [];
-
-% plot and SNR histogramm
 figure(3)
-histogram(BER_PCC_vec,200)
-xlim([-0.1 0.5])
-xline(mean(BER_PCC_vec), 'r')
-title_str = "BER of PCC " + num2str(numel(BER_PCC_vec)) +  " files";
-title(title_str);
+clf()
+subplot(2,1,1)
+plot_snr_hist(results, "PDC_snr_dB");
+subplot(2,1,2)
+plot_ber_hist(results, "BER_PDC")
+
+function plot_snr_hist(results, fieldname)
+    hist_container = get_histogramm_of_field(results, fieldname);
+    histogram(hist_container);
+    xlim([0 max(15, 1.5*max(hist_container))])
+    title_str = fieldname + " for " + num2str(numel(results)) +  " files";
+    title(title_str, 'Interpreter', 'none');
+end
+
+function plot_ber_hist(results, fieldname)
+    hist_container = get_histogramm_of_field(results, fieldname);
+    histogram(hist_container, 200);
+    xlim([-0.2 1.2])
+    title_str = fieldname + " for " + num2str(numel(results)) +  " files";
+    title(title_str, 'Interpreter', 'none');
+end
+
+function hist_container = get_histogramm_of_field(results, fieldname)
+    hist_container = zeros(numel(results), 1);
+    for i = numel(results):-1:1
+        if isempty(results(i)) == false
+            S = results{i};
+            hist_container(i) = extractfield(S, fieldname);
+        else
+            hist_container(i) = [];
+        end
+    end
+end
