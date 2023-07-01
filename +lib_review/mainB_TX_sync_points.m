@@ -6,6 +6,9 @@ clc;
 
 warning on
 
+% how many samples deviation are acceptable?
+sync_point_correct_limit = 0;
+
 % load and separate all json files
 [filenames, n_files] = lib_util.get_all_filenames('results');
 [tx_filenames, joq_queue_filename, rx_synced_filenames] = lib_review.lib_helper.json_separate(filenames, n_files);
@@ -20,7 +23,8 @@ joq_queue_sync_fine_peak_time_64_vec = joq_queue_json_struct.sync_fine_peak_time
 
 tx_to_sync_points_optimal_idx_A = lib_review.lib_helper.TX_compare_sync_points( tx_filenames,...
                                                                                 "Sync points from job queue:", ...
-                                                                                joq_queue_sync_fine_peak_time_64_vec);
+                                                                                joq_queue_sync_fine_peak_time_64_vec, ...
+                                                                                sync_point_correct_limit);
 
 %% sync points from rx files
 rx_synced_sync_fine_peak_time_64_vec = zeros(numel(rx_synced_filenames), 1);
@@ -40,4 +44,5 @@ end
 
 tx_to_sync_points_optimal_idx_B = lib_review.lib_helper.TX_compare_sync_points( tx_filenames, ...
                                                                                 "Sync points from rx files: ", ...
-                                                                                rx_synced_sync_fine_peak_time_64_vec);
+                                                                                rx_synced_sync_fine_peak_time_64_vec, ...
+                                                                                sync_point_correct_limit);

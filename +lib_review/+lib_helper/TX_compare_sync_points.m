@@ -1,7 +1,4 @@
-function [tx_to_sync_points_optimal_idx] = TX_compare_sync_points(tx_filenames, string_sync_points_src, sync_fine_peak_time_64_vec)
-
-    % how many samples deviation are acceptable?
-    sync_point_correct_limit = 2;
+function [tx_to_sync_points_optimal_idx] = TX_compare_sync_points(tx_filenames, string_sync_points_src, sync_fine_peak_time_64_vec, sync_point_correct_limit)
 
     % 0 means no optimal file found
     tx_to_sync_points_optimal_idx = ones(size(tx_filenames)) * 0;

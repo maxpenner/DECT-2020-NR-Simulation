@@ -6,6 +6,9 @@ clc;
 
 warning on
 
+% how many samples deviation are acceptable?
+sync_point_correct_limit = 2;
+
 % load and separate all json files
 [filenames, n_files] = lib_util.get_all_filenames('results');
 [tx_filenames, ~, rx_synced_filenames] = lib_review.lib_helper.json_separate(filenames, n_files);
@@ -29,7 +32,8 @@ end
 % find mapping between tx times and sync points
 tx_to_sync_points_optimal_idx = lib_review.lib_helper.TX_compare_sync_points(   tx_filenames, ...
                                                                                 "Sync points from rx files: ", ...
-                                                                                rx_synced_sync_fine_peak_time_64_vec);
+                                                                                rx_synced_sync_fine_peak_time_64_vec, ...
+                                                                                sync_point_correct_limit);
 
 %% check every tx packet numerically, and then compare with rx packet
 
@@ -71,14 +75,14 @@ for i=1:1:numel(tx_filenames)
     rx_json_struct = lib_review.lib_helper.json_load(ffn);
 
     % first compare packets numerically
-    result_signal = lib_review.lib_helper.TX_RX_compare_numerically(tx, samples_antenna_tx_matlab, rx_json_struct);
+    result_signal = lib_review.lib_helper.TX_RX_compare_numerically(tx, samples_antenna_tx_matlab_resampled, tx_json_struct, rx_json_struct);
 
     % save
     results(i) = {result_signal};
 
     % then plot
     if plot_every_packet == true
-        lib_review.lib_helper.TX_RX_compare_plot(samples_antenna_tx_matlab, result_signal.samples_antenna_rx_cpp, result_signal.IQ_err_max_idx);
+        lib_review.lib_helper.TX_RX_compare_plot(samples_antenna_tx_matlab_resampled, result_signal.samples_antenna_rx_cpp, result_signal.IQ_err_max_idx);
     end
 end
 

@@ -1,5 +1,6 @@
 function [result] = TX_RX_compare_numerically(  tx, ...
                                                 samples_antenna_tx_matlab_resampled, ...
+                                                tx_json_struct, ...
                                                 rx_json_struct)
 
     %% compare IQ samples
@@ -15,11 +16,11 @@ function [result] = TX_RX_compare_numerically(  tx, ...
 
     % find smaller of both sizes
     [N_samples_matlab, N_TX_matlab] = size(samples_antenna_tx_matlab_resampled);
-    [N_samples_cpp, N_RX_matlab] = size(samples_antenna_rx_cpp);
+    [N_samples_cpp, N_RX_cpp] = size(samples_antenna_rx_cpp);
     N_samples_min = min(N_samples_matlab, N_samples_cpp);
 
     % this comparison only works for SISO
-    if N_TX_matlab ~= 1 || N_TX_matlab ~= N_RX_matlab
+    if N_TX_matlab ~= 1 || N_TX_matlab ~= N_RX_cpp
         error("Comparison of TX signal with RX signal only possible for SISO.");
     end
 
@@ -32,6 +33,15 @@ function [result] = TX_RX_compare_numerically(  tx, ...
 
     fprintf("\tMaximum deviation between TX signal and RX signal is %f and idx=%d.\n", IQ_err_max, IQ_err_max_idx);
     fprintf("\tSNR between TX signal and RX signal is %f dB.\n", IQ_snr_dB);
+
+    %% extract values right after FFT
+    FFT_cpp = rx_json_struct.data.FFT.real + 1i*rx_json_struct.data.FFT.imag;
+
+    %% extract complex derotated values of PCC
+    PCC_cmplx_derotated_vec = rx_json_struct.data.PCC_cmplx_derotated_vec.real + 1i*rx_json_struct.data.PCC_cmplx_derotated_vec.imag;
+
+    %% extract complex derotated values of PCC
+    PDC_cmplx_derotated_vec = rx_json_struct.data.PDC_cmplx_derotated_vec.real + 1i*rx_json_struct.data.PDC_cmplx_derotated_vec.imag;
 
     %% C++ turns bit into shorts, get correct scaling factor
     PCC_scaling = rx_json_struct.data.binary.SCALE_SHORT_CONV_QPSK;
