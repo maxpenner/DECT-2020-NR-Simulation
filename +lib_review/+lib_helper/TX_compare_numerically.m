@@ -81,21 +81,24 @@ function [tx, ...
         L                           = json_struct.resampling.L;
         M                           = json_struct.resampling.M;
         hw_samp_rate                = json_struct.resampling.samp_rate;
-        normalized_input_passband   = json_struct.resampling.normalized_input_passband;
-        oversampling_minimum        = json_struct.resampling.oversampling_minimum;
+        % note: f_pass_norm and f_stop_norm include oversampling
+        f_pass_norm                 = json_struct.resampling.f_pass_norm;
+        f_stop_norm                 = json_struct.resampling.f_stop_norm;
+        passband_ripple_dB          = json_struct.resampling.passband_ripple_dB;
+        stopband_attenuation_dB     = json_struct.resampling.stopband_attenuation_dB;
+        % note: f_pass_norm and f_stop_norm include oversampling
+        oversampling_minimum        = 1;
 
         % what is the DECT2020-NR sample rate before resampling?
         dect_samp_rate              = hw_samp_rate/L*M;
 
-        % design resampling filter
-        u = 1;
-        b = 1;
-        N_b_DFT = 64;
-
-        % determine number of required guards to get the same normalized_input_passband
-        n_guards_top = 32 - 2*32*normalized_input_passband*oversampling_minimum;
-
-        [fir_coef_tx, ~] = lib_rx.resampling_filter_design(u, b, N_b_DFT, n_guards_top, oversampling_minimum, L, M);
+        [fir_coef_tx, ~] = lib_rx.resampling_filter_design( L, ...
+                                                            M, ...
+                                                            f_pass_norm, ...
+                                                            f_stop_norm, ...
+                                                            passband_ripple_dB, ...
+                                                            stopband_attenuation_dB, ...
+                                                            oversampling_minimum);
 
         % resample
         samples_antenna_tx_matlab_resampled = lib_rx.resampling_polyphase(samples_antenna_tx_matlab, L, M, fir_coef_tx);

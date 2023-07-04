@@ -1,12 +1,19 @@
-function [fir_coef_tx, fir_coef_rx] = resampling_filter_design(u, b, N_b_DFT, n_guards_top, oversampling, L, M)
-
-    % At Nyquist, our passband is 0.5 Hz at a sample rate of 1 Hz.
-    % However, due to guards bandswe don't use the full passband. It is slightly less than 0.5 Hz.
-    Nyquist_passband_optimized = (N_b_DFT/2 - n_guards_top)/N_b_DFT;
-
-    % sanity check
+function [fir_coef_tx, fir_coef_rx] = resampling_filter_design( L, ...
+                                                                M, ...
+                                                                f_pass_norm, ...
+                                                                f_stop_norm, ...
+                                                                passband_ripple_dB, ...
+                                                                stopband_attenuation_dB, ...
+                                                                oversampling)
+    % sanity checks
     if L <= M
         error('For resampling L must be larger than M.');
+    end
+    if f_pass_norm >= 0.5
+        error('For critically sampled signals passband must end below 0.5 Hz.');
+    end
+    if f_pass_norm >= f_stop_norm
+        error('f_pass_norm must be smaller than f_stop_norm.');
     end
 
     % Image filter and ani aliasing filter merge into one.
@@ -14,37 +21,15 @@ function [fir_coef_tx, fir_coef_rx] = resampling_filter_design(u, b, N_b_DFT, n_
 
     % TX resampling filter design
 
-    % design a low pass filter for resampling at the transmitter
-    if oversampling == 1
-        
-        if Nyquist_passband_optimized >= 0.5
-            error('For critically sampled signals passband must end below 0.5 Hz.');
-        end
-
-        % critically sampled
-        f_pass = Nyquist_passband_optimized * 1/L;
-        f_stop = (1.0 - Nyquist_passband_optimized) * 1/L;
-
-    else
-        
-        % Option A
-        Nyquist_passband_used = Nyquist_passband_optimized;
-        
-        % Option B
-        %Nyquist_passband_used = 0.5;
-
-        % this is a far better solution for a low number of fir samples, oversampling should be at least 2
-        f_pass = Nyquist_passband_used / oversampling * 1/L;
-        f_stop = (1 - Nyquist_passband_used / oversampling) * 1/L;
-
-    end
+    f_pass = f_pass_norm / oversampling * 1/L;
+    f_stop = f_stop_norm / oversampling * 1/L;
 
     % generate a filter with Matlab function
     fir_tx = designfilt('lowpassfir', ...
                         'PassbandFrequency',f_pass, ...
                         'StopbandFrequency',f_stop, ...
-                        'PassbandRipple',5, ...
-                        'StopbandAttenuation',30, ...
+                        'PassbandRipple',passband_ripple_dB, ...
+                        'StopbandAttenuation',stopband_attenuation_dB, ...
                         'DesignMethod','kaiserwin', ...
                         'SampleRate',1);
 
@@ -63,42 +48,17 @@ function [fir_coef_tx, fir_coef_rx] = resampling_filter_design(u, b, N_b_DFT, n_
 
     % RX resampling filter design
 
-    % design a low pass filter for resampling at the receiver
-    if oversampling == 1
-
-        if Nyquist_passband_optimized >= 0.5
-            error('For critically sampled signals passband must end below 0.5 Hz.');
-        end
-
-        % critically sampled
-        f_pass = Nyquist_passband_optimized * 1/L;
-        f_stop = (1.0 - Nyquist_passband_optimized) * 1/L;
-
-    else
-
-        % Option A
-        %Nyquist_passband_used = Nyquist_passband_optimized;
-        
-        % Option B
-        Nyquist_passband_used = 0.5;
-
-        % this is a far better solution for a low number of fir samples, oversampling should be at least 2
-        f_pass = Nyquist_passband_used / oversampling * 1/L;
-
-        %f_stop = 0.4*1/L_or_M_larger;
-        f_stop = f_pass + f_pass/(u*b);
-    end
+    f_pass = f_pass_norm / oversampling * 1/L;
+    f_stop = f_stop_norm / oversampling * 1/L;
 
     % generate a filter with Matlab function
     fir_rx = designfilt('lowpassfir', ...
                         'PassbandFrequency',f_pass, ...
                         'StopbandFrequency',f_stop, ...
-                        'PassbandRipple',5, ...
-                        'StopbandAttenuation',30, ...
+                        'PassbandRipple',passband_ripple_dB, ...
+                        'StopbandAttenuation',stopband_attenuation_dB, ...
                         'DesignMethod','kaiserwin', ...
                         'SampleRate',1);
-
-
 
     % extract filter coefficients
     fir_coef_rx_reference = M*tf(fir_rx);
