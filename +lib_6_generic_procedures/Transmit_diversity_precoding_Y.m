@@ -18,8 +18,8 @@ function [Y, idx, prefactor] = Transmit_diversity_precoding_Y(N_TS)
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    %dont_use_preafactor_as_in_TS = true;
-    dont_use_preafactor_as_in_TS = false;
+    dont_use_preafactor_as_in_TS = true;
+    %dont_use_preafactor_as_in_TS = false;
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!

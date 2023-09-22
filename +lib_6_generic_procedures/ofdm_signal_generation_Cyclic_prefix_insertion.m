@@ -185,7 +185,7 @@ function [samples_antenna] = ofdm_signal_generation_Cyclic_prefix_insertion(ante
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % The STF in inserted only in first transmit stream.
     % When using multiple antennas, we have to boost the STF so it has the same average power as the other ofdm symbols.
-    samples_antenna(1:STF_in_samples,:) = sqrt(N_eff_TX)*samples_antenna(1:STF_in_samples,:);
+    %samples_antenna(1:STF_in_samples,:) = sqrt(N_eff_TX)*samples_antenna(1:STF_in_samples,:);
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!

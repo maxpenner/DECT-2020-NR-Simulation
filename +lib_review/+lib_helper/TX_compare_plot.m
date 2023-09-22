@@ -38,6 +38,7 @@ function [] = TX_compare_plot(  filename, ...
         hold on
         plot(real(samples_antenna_tx_cpp(:,i)), 'r');
         legend('Matlab', 'C++');
+        grid on
 
         t = title(strcat("File Name: ", filename));
         set(t,'Interpreter','none');
@@ -48,6 +49,7 @@ function [] = TX_compare_plot(  filename, ...
         hold on
         plot(imag(samples_antenna_tx_cpp(:,i)), 'r');
         legend('Matlab', 'C++');
+        grid on
 
         % compare real before and after resampling
         subplot(5,1,3)
@@ -55,6 +57,7 @@ function [] = TX_compare_plot(  filename, ...
         hold on
         plot(t_hw, real(samples_antenna_tx_cpp(:,i)), 'r');
         legend('Matlab before resampling', 'C++ resampled');
+        grid on
 
         % compare imag before and after resampling
         subplot(5,1,4)
@@ -62,9 +65,15 @@ function [] = TX_compare_plot(  filename, ...
         hold on
         plot(t_hw, imag(samples_antenna_tx_cpp(:,i)), 'r');
         legend('Matlab before resampling', 'C++ resampled');
+        grid on
 
         % observe frequency shift
         subplot(5,1,5)
-        spectrogram(sum(samples_antenna_tx_cpp, 2))
+        spec_tmp = sum(samples_antenna_tx_matlab_resampled, 2);
+        spec_tmp = fftshift(fft(spec_tmp));
+        spec_tmp = abs(spec_tmp).^2;
+        spec_tmp = pow2db(spec_tmp);
+        plot(spec_tmp);
+        grid on
     end
 end

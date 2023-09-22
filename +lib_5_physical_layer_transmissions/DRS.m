@@ -102,7 +102,7 @@ function [physical_resource_mapping_DRS_cell] = DRS(numerology, k_b_OCC, N_TS, N
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % increase power when using more antennas
-    y_b1 = y_b1*sqrt(N_eff_TX);
+    %y_b1 = y_b1*sqrt(N_eff_TX);
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
     % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
