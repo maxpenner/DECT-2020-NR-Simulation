@@ -32,7 +32,7 @@ end
 plcf_meta.type                  = mac_meta_tx.PLCF_type;
 plcf_meta.Header_Format         = 0;
 plcf_meta.Packet_length_type    = mac_meta_tx.PacketLengthType;
-plcf_meta.Packet_length         = mac_meta_tx.PacketLength + 1;     % Table 6.2.1-1: "signalled numerical value plus one"
+plcf_meta.Packet_length         = mac_meta_tx.PacketLength - 1;     % Table 6.2.1-1: "signalled numerical value plus one"
 plcf_meta.Short_Network_ID      = 123;
 plcf_meta.Transmitter_Identity  = 123;
 plcf_meta.Transmit_Power        = 0;
