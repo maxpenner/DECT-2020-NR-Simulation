@@ -42,6 +42,8 @@ function fir_coef = resampling_kaiser(  PassbandFrequency,...
     % number of taps
     N = ceil(filter_order + 1);
 
+    assert(N > 0);
+
     % make sure we have an uneven filter length, this way the delay isn't fractional
     if N_force_odd == true
         if mod(N,2) == 0

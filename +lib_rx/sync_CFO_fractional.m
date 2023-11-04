@@ -12,6 +12,14 @@ function [samples_antenna_sto_cfo, cfo_report] = sync_CFO_fractional(verbose, sa
         case {2,4,8}
             L = 9;
     end
+
+    assert(mod(n_STF_template, L*16) == 0, 'oversampling not an integer value');
+
+    % n_STF_template is the oversampled length of the STF, by dividing with L*16 we get the oversampling itself
+    oversampling = n_STF_template / (L*16);
+
+    % revert STF cover sequence by applying it
+    samples_antenna_sto = lib_6_generic_procedures.STF_signal_cover_sequence(samples_antenna_sto, u, oversampling);
     
     % number of samples in a single pattern repetition
     n_STF_pattern = n_STF_template/L;

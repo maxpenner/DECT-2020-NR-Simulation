@@ -3,8 +3,7 @@ function [fir_coef_tx, fir_coef_rx] = resampling_filter_design( L, ...
                                                                 f_pass_norm, ...
                                                                 f_stop_norm, ...
                                                                 passband_ripple_dB, ...
-                                                                stopband_attenuation_dB, ...
-                                                                oversampling)
+                                                                stopband_attenuation_dB)
     % sanity checks
     if L <= M
         error('For resampling L must be larger than M.');
@@ -21,8 +20,8 @@ function [fir_coef_tx, fir_coef_rx] = resampling_filter_design( L, ...
 
     % TX resampling filter design
 
-    f_pass = f_pass_norm / oversampling * 1/L;
-    f_stop = f_stop_norm / oversampling * 1/L;
+    f_pass = f_pass_norm * 1/L;
+    f_stop = f_stop_norm * 1/L;
 
     % generate a filter with Matlab function
     fir_tx = designfilt('lowpassfir', ...
@@ -48,8 +47,8 @@ function [fir_coef_tx, fir_coef_rx] = resampling_filter_design( L, ...
 
     % RX resampling filter design
 
-    f_pass = f_pass_norm / oversampling * 1/L;
-    f_stop = f_stop_norm / oversampling * 1/L;
+    f_pass = f_pass_norm * 1/L;
+    f_stop = f_stop_norm * 1/L;
 
     % generate a filter with Matlab function
     fir_rx = designfilt('lowpassfir', ...

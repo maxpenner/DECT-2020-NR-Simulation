@@ -134,6 +134,9 @@ classdef dect_tx < handle
                                                                                                             N_b_CP,...
                                                                                                             oversampling);
 
+            % apply STF cover sequence
+            samples_antenna_tx = lib_6_generic_procedures.STF_signal_cover_sequence(samples_antenna_tx, u, oversampling);
+
             %% save packet data for debugging
             obj.packet_data.x_PCC = x_PCC;
           	obj.packet_data.x_PDC = x_PDC;

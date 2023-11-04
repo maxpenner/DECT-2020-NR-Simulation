@@ -46,9 +46,9 @@ use_ADC_scaling = true;
 if use_ADC_scaling == true
 
     % force signal into ADC range after RF channel
-    %ADC_range_scalingFactor = 0.7;     % severe clipping, but RX is still functional
+    %ADC_range_scalingFactor = 0.7;     % severe clipping, but QPSK is still functional
     ADC_range_scalingFactor = 0.25;  	% avoid most clipping
-    %ADC_range_scalingFactor = 0.01;    % very slow amplitude (make sure QPSK is used)
+    %ADC_range_scalingFactor = 0.01;    % very low amplitude (make sure QPSK is used)
     
     % typical values are 8 (e.g. HackRF, RTL-SDR), 12, 14 and 16
     n_ADC_bits = 14;
@@ -116,6 +116,24 @@ for mcs_index = mcs_index_vec
     % create tx
     verbose = 0;
     txx = dect_tx(verbose, mac_meta_tx);
+
+    % Kaiser
+    passband_ripple_dB = 10;
+    stopband_attenuation_dB = 40;
+
+    % low pass filter design
+    if mac_meta_tx.oversampling == 1
+        f_pass_norm = 0.48;
+        f_stop_norm = 0.499;
+
+        % relaxed requirements
+        passband_ripple_dB = 20;
+        stopband_attenuation_dB = 20;
+    else
+        % relaxed requirements, note that mac_meta_tx.oversampling >= 2
+        f_pass_norm = 0.6/mac_meta_tx.oversampling;
+        f_stop_norm = 0.8/mac_meta_tx.oversampling;
+    end
     
     % determine optimal Hardware sample rate
     if use_resampling == true
@@ -124,22 +142,28 @@ for mcs_index = mcs_index_vec
         [USRP_samp_rate, L, M] = lib_rx.resampling_USRP_rate(txx.phy_4_5.numerology.B_u_b_DFT, mac_meta_tx.oversampling, USRP_samp_rate_min_multiple);
 
         % design resampling fir filters
-        f_pass_norm = 29/32*0.5;
-        f_stop_norm = 0.48; 
-        passband_ripple_dB = 10;
-        stopband_attenuation_dB = 40;
         [fir_coef_tx, fir_coef_rx] = lib_rx.resampling_filter_design(   L, ...
                                                                         M, ...
                                                                         f_pass_norm, ...
                                                                         f_stop_norm, ...
                                                                         passband_ripple_dB, ...
-                                                                        stopband_attenuation_dB, ...
-                                                                        mac_meta_tx.oversampling);
+                                                                        stopband_attenuation_dB);
     else
 
         % no resampling, required for RF channel
         L = 1;
         M = 1;
+
+        lowpassfilter = designfilt( 'lowpassfir', ...
+                                    'PassbandFrequency',f_pass_norm, ...
+                                    'StopbandFrequency',f_stop_norm, ...
+                                    'PassbandRipple',passband_ripple_dB, ...
+                                    'StopbandAttenuation',stopband_attenuation_dB, ...
+                                    'SampleRate',1, ...
+                                    'DesignMethod','kaiserwin', ...
+                                    'MinOrder', 'even');
+
+        lowpassfilter_delay = (numel(lowpassfilter.Coefficients)-1)/2;
     end
     
     % additional rx configuration
@@ -157,6 +181,10 @@ for mcs_index = mcs_index_vec
         mac_meta_rx.synchronization.stf.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
         mac_meta_rx.synchronization.stf.cfo_config.active_fractional = true;
         mac_meta_rx.synchronization.stf.cfo_config.active_integer = true;
+
+        if mac_meta_tx.oversampling == 1 && mac_meta_rx.synchronization.stf.cfo_config.CFO_max_deviation_subcarrier_spacings > 3
+            error("When oversampling is 1, we can at most correct CFOs of up to 3 to 4 subcarriers. But CFO range exceeds that limit.");
+        end
     end
     
     % synchronization based on DRS (residual CFO)
@@ -366,6 +394,12 @@ for mcs_index = mcs_index_vec
 
                             % we don't resample, directly pass samples through channel
                             samples_antenna_rx = ch.pass_samples(samples_antenna_tx, 0);
+
+                            % lowpass filter, otherwise performance is worse for oversampled signals
+                            samples_antenna_rx = filter(lowpassfilter, samples_antenna_rx);
+
+                            % compensate for deterministic filter delay prior to synchronization
+                            samples_antenna_rx(1:end-lowpassfilter_delay) = samples_antenna_rx(lowpassfilter_delay+1:end)
 
                             if use_ADC_scaling == true
 

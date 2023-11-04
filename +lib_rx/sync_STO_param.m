@@ -34,7 +34,7 @@ function [sto_config] = sync_STO_param(u, b, oversampling)
     sto_config.coarse_peak.search_length    = 1.75*n_samples_coarse_metric_first_half_no_noise;
     sto_config.coarse_peak.step             = 1;
     sto_config.coarse_peak.threshold        = 0.15;
-    sto_config.coarse_peak.movmean          = [6*b*oversampling 2*b*oversampling];
+    sto_config.coarse_peak.movmean          = [3*b*oversampling 3*b*oversampling];
 
     sto_config.fine.search_area             = 24*b*oversampling;
 end
