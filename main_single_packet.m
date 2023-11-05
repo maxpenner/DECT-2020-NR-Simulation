@@ -160,6 +160,27 @@ rx.ch_handle = ch;
 %% pass tx signal through channel and yield rx signal (this step can be skipped)
 samples_antenna_rx = ch.pass_samples(samples_antenna_tx, 0);
 
+%% The property snr_db of the RF channel refers to the inband noise. If oversampling is used, we have to remove out-of-band noise, otherwise synchronization in time domain is impaired.
+if mac_meta_tx.oversampling > 1
+    % Kaiser LPF
+    lowpassfilter = designfilt( 'lowpassfir', ...
+                                'PassbandFrequency', 0.6 / mac_meta_tx.oversampling, ...
+                                'StopbandFrequency',0.8 / mac_meta_tx.oversampling, ...
+                                'PassbandRipple', 10, ...
+                                'StopbandAttenuation', 30, ...
+                                'SampleRate', 1, ...
+                                'DesignMethod', 'kaiserwin', ...
+                                'MinOrder', 'even');
+    
+    assert(mod(numel(lowpassfilter.Coefficients), 2) == 1, 'fractional LPF delay');
+    
+    samples_antenna_rx = filter(lowpassfilter, samples_antenna_rx);
+    
+    % compensate for deterministic filter delay prior to synchronization
+    lowpassfilter_delay = (numel(lowpassfilter.Coefficients)-1)/2;
+    samples_antenna_rx(1:end-lowpassfilter_delay) = samples_antenna_rx(lowpassfilter_delay+1:end);
+end
+
 %% let rx decode the frame
 [PCC_user_bits_recovered, PDC_user_bits_recovered] = rx.demod_decode_packet(samples_antenna_rx);
 
