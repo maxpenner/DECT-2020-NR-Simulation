@@ -51,6 +51,11 @@ for i=1:1:numel(tx_filenames)
      dect_samp_rate, ...
      hw_samp_rate] = lib_review.lib_helper.TX_compare_numerically(ffn, tx_json_struct);
 
+    % skip if numeric comparison failed gracefully
+    if isempty(samples_antenna_tx_matlab)
+        continue;
+    end
+
     % numerical comparison successful, now plot for visual confirmation
     if plot_every_packet == true
         lib_review.lib_helper.TX_compare_plot(  filename, ...

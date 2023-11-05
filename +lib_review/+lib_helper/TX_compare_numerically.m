@@ -43,7 +43,15 @@ function [tx, ...
     try
         samples_antenna_tx_matlab = tx.generate_packet(PLCF_bits_cpp, TB_bits_cpp);
     catch
-        error("\tPacket generation failed, likely lteRateMatchTurbo() threw. Check error message. Returning.\n");
+        tx = [];
+        samples_antenna_tx_matlab = [];
+        samples_antenna_tx_matlab_resampled = [];
+        samples_antenna_tx_cpp = [];
+        dect_samp_rate = [];
+        hw_samp_rate = [];
+
+        fprintf("\tPacket generation failed, likely lteRateMatchTurbo() threw. Check error message. Returning.\n");
+        return;
     end
 
     % compare PCC bit errors after coding
@@ -97,8 +105,7 @@ function [tx, ...
                                                             f_pass_norm, ...
                                                             f_stop_norm, ...
                                                             passband_ripple_dB, ...
-                                                            stopband_attenuation_dB, ...
-                                                            oversampling_minimum);
+                                                            stopband_attenuation_dB);
 
         % resample
         samples_antenna_tx_matlab_resampled = lib_rx.resampling_polyphase(samples_antenna_tx_matlab, L, M, fir_coef_tx);
