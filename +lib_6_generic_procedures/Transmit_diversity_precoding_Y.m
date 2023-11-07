@@ -12,18 +12,17 @@ function [Y, idx, prefactor] = Transmit_diversity_precoding_Y(N_TS)
     %   1 stream on 8 antennas -> prefactor = 2 as the matrix in Table 6.3.3.2-3 already incorporates a prefactor of sqrt(2), so (sqrt(2)*2)^2=8 times the power in total
     %
     % Later, either beamforming or the Antenna_mapper_scaler(), if no beamforming is used, will decrease the power.
-    %
     
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
     dont_use_preafactor_as_in_TS = true;
     %dont_use_preafactor_as_in_TS = false;
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
     
     prefactor = 1.0;
 

@@ -30,7 +30,7 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
     %% detection by coarse metric threshold crossing
 
     % For each RX antenna, we go over all samples and calculate a metric until we cross a predefined threshold.
-    % We need the sample index of this theshold crossings.
+    % We need the sample index of this threshold crossings.
     coarse_threshold_crossing_idx = zeros(N_RX, 1);
 
     for i=1:1:N_RX
@@ -104,23 +104,22 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
         % container for detection metric
         metric = zeros(sto_config.coarse_peak.search_length, 1);
 
-        % we continue the search with s much smaller step size
+        % we continue the search with a much smaller step size
         for m = 1 : sto_config.coarse_peak.step : sto_config.coarse_peak.search_length
 
-            % We found the packet too late and we let the rest of the matrix at zero.
-            % This can't happen in a real receiver, but here we have a limited amount of samples.
+            % We found the packet too late. This can't happen in a real receiver, but here we have a limited amount of samples.
             % Nevertheless, this should barely ever happen.
             if m + n_samples_STF_os-1 > n_samples_ch
                 break;
             end
 
-            % determine the metric at this samples index
+            % determine the metric at this sample index
             metric(m) = lib_rx.sync_STO_coarse_metric(samples_antenna_single(m:m+n_samples_STF_os-1), M, L, sto_config.minimum_power_threshold);
         end
 
         % warning: if sto_config.coarse_peak.step > 1, we apply the moving average across zeros!
 
-        % we apply some filtering to smooth the coarse detection
+        % apply some filtering to smooth the coarse detection
         metric_mm = movmean(metric, sto_config.coarse_peak.movmean);
 
         % finally we search for the maximum
@@ -167,12 +166,12 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
     % it can actually happen that we have no peak above the threshold, e.g. for a false alarm
     if isempty(coarse_peak_height) == false
 
-        % the sync point are the peak indices weighted by the height
+        % sync points are peak indices weighted by the height
         normalization = coarse_peak_height/sum(coarse_peak_height);
         coarse_sync_idx = sum( coarse_peak_idx .* normalization);
         coarse_sync_idx = floor(coarse_sync_idx);
 
-        % make sure every the indices are within range
+        % make sure all indexes are within range
         if coarse_sync_idx <= 0
             coarse_sync_idx = 1;
         end
@@ -180,7 +179,7 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
             coarse_sync_idx = sto_config.coarse_peak.search_length;
         end
 
-    % if we didn't find any packets, assume a synchronization at 1
+    % if we didn't find any packets, assume synchronization at 1
     else
         coarse_sync_idx = 1;
     end
@@ -237,7 +236,7 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
         % get the samples of this particular antenna
         samples_antenna_single = samples_antenna_required(:,i);
         
-        % try every possible ytf type
+        % try every possible stf type
         for j=1:1:numel(STF_templates.time_domain)
 
             % stf templates in time domain are already oversampled
@@ -325,7 +324,7 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
 
     %% extract packet starting at the fine synchronization point and correct the CFO for the entire packet
     
-    % packet is longer when oversampling
+    % packet is longer when oversampled
     n_packet_samples = n_packet_samples*oversampling;
 
     % we need a new time base with the length of one frame

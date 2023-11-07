@@ -26,8 +26,8 @@ for iter = 1:N_iter
     cs_os = repelem(cs, bs_len_os);
     
     % indexes of weight changes from 1 to -1 and -1 to 1 within the shift register due to the cover sequence
-    acc_ptr_offset_weight_change_negative_vec = get_acc_ptr_offset_weight_change_negative(cs, bs_len_os);
-    acc_ptr_offset_weight_change_positive_vec = get_acc_ptr_offset_weight_change_positive(cs, bs_len_os);
+    [acc_ptr_offset_weight_change_negative_vec, ...
+     acc_ptr_offset_weight_change_positive_vec] = get_acc_ptr_offset_weight_change(cs, bs_len_os);
     
     % random IQ input
     inp_len = randi([101,9999],1,1);
@@ -84,29 +84,22 @@ for iter = 1:N_iter
     end
 end
 
-function acc_ptr_offset_weight_change_negative_vec = get_acc_ptr_offset_weight_change_negative(cs, bs_len)
+function [acc_ptr_offset_weight_change_negative_vec, ...
+            acc_ptr_offset_weight_change_positive_vec] = get_acc_ptr_offset_weight_change(cs, bs_len)
     
     acc_ptr_offset_weight_change_negative_vec = [];
+    acc_ptr_offset_weight_change_positive_vec = [];
 
     for i=2:numel(cs)
         if cs(i-1) == 1 && cs(i) == -1
             acc_ptr_offset_weight_change_negative_vec(end+1) = i-1;
         end
-    end
-    
-    acc_ptr_offset_weight_change_negative_vec = acc_ptr_offset_weight_change_negative_vec*bs_len;
-end
-
-function acc_ptr_offset_weight_change_positive_vec = get_acc_ptr_offset_weight_change_positive(cs, bs_len)
-    
-    acc_ptr_offset_weight_change_positive_vec = [];
-
-    for i=2:numel(cs)
         if cs(i-1) == -1 && cs(i) == 1
             acc_ptr_offset_weight_change_positive_vec(end+1) = i-1;
         end
     end
     
+    acc_ptr_offset_weight_change_negative_vec = acc_ptr_offset_weight_change_negative_vec*bs_len;
     acc_ptr_offset_weight_change_positive_vec = acc_ptr_offset_weight_change_positive_vec*bs_len;
 end
 

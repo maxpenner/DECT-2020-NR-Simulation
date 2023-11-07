@@ -97,16 +97,16 @@ function [physical_resource_mapping_DRS_cell] = DRS(numerology, k_b_OCC, N_TS, N
     y_b1 = [1,1,1,1,-1,1,1,-1,-1,1,1,1,1,-1,1,-1,1,1,-1,1,-1,1,-1,1,1,1,1,1,-1,1,...
             -1,-1,1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,-1,1,1,1,-1,1,1,-1,-1,1,-1,-1,-1];
         
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
     % increase power when using more antennas
     %y_b1 = y_b1*sqrt(N_eff_TX);
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
-    % !!!!!!!!!!! NOT STANDART COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+    % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
         
     y_b2 = [y_b1,y_b1];
     y_b4 = [y_b2, y_b2];
