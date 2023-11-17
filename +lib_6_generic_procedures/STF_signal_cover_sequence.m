@@ -5,8 +5,10 @@ function [samples_antenna_tx_with_cover_sequence] = STF_signal_cover_sequence(  
     % lookup cover sequence
     if u==1
         c_u = [1; -1; 1; 1; -1; -1; -1];
+        %c_u = ones(7,1);
     else
         c_u = [1; -1; 1; 1; -1; -1; -1; -1; -1];
+        %c_u = ones(9,1);
     end
 
     % every pattern has a length of 16 samples, on top we put the oversampling
