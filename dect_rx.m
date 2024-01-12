@@ -38,7 +38,25 @@ classdef dect_rx < handle
             obj.harq_buf_80 = [];
             obj.harq_buf = [];
             
-            obj.wiener = [];
+            % init wiener coefficients with reasonable default values
+            obj.overwrite_wiener(1/10^(30/10), ...  % 30dB SNR
+                                 20, ...            % 20Hz Doppler
+                                 363e-9);           % 363ns delay spread
+        end
+
+        % Wiener filter interpolates between DRS pilots. Optimal interpolation depends on channel properties.
+        % We use a static filter which is used regardless of the instantaneous channel.
+        % For noise, the best case value is assumed, for delay and Doppler spread the worst case value.
+        % To improve performance, different sets should be precalculated for different SNRs.
+        function [] = overwrite_wiener(obj, noise_estim, f_d_hertz, tau_rms_sec)
+            obj.wiener = lib_rx.channel_estimation_wiener_weights(  obj.phy_4_5.physical_resource_mapping_DRS_cell,...
+                                                                    obj.phy_4_5.numerology.N_b_DFT,...
+                                                                    obj.phy_4_5.N_PACKET_symb,...
+                                                                    obj.phy_4_5.numerology.N_b_CP, ...
+                                                                    obj.phy_4_5.numerology.B_u_b_DFT,...
+                                                                    noise_estim, ...
+                                                                    f_d_hertz, ...
+                                                                    tau_rms_sec);
         end
         
         % We pass on the samples as they are received at the antennas and we try to extract the PCC and PDC bits.

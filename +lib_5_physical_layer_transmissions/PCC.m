@@ -118,7 +118,7 @@ function [physical_resource_mapping_PCC_cell] = PCC(numerology, k_b_OCC, N_TS, N
         % remember current ofdm symbol
         ofdm_symbol_indices = [ofdm_symbol_indices, l];
         
-        % do while loop exit condition: we have found more subcariers in this symbol (U) than we still need (N_unalloc_subc)
+        % do while loop exit condition: we have found more subcarriers in this symbol (U) than we still need (N_unalloc_subc)
         if U >= N_unalloc_subc
             break;
         end

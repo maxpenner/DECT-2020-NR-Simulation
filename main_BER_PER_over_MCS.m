@@ -78,7 +78,7 @@ for mcs_index = mcs_index_vec
     
     % create tx
     verbose = 0;
-    txx = dect_tx(verbose, mac_meta_tx);
+    tx = dect_tx(verbose, mac_meta_tx);
 
     % additional rx configuration
     mac_meta_rx = mac_meta_tx;
@@ -107,17 +107,17 @@ for mcs_index = mcs_index_vec
     mac_meta_rx.active_equalization_detection = true;
 
     % create rx
-    rxx = dect_rx(verbose, mac_meta_rx);
+    rx = dect_rx(verbose, mac_meta_rx);
 
     % how many antennas do we have?
-    N_TX = txx.phy_4_5.tm_mode.N_TX;
-    N_RX = rxx.mac_meta.N_RX;
+    N_TX = tx.phy_4_5.tm_mode.N_TX;
+    N_RX = rx.mac_meta.N_RX;
 
     % how many bits does tx need?
-    N_TB_bits = txx.phy_4_5.N_TB_bits;
+    N_TB_bits = tx.phy_4_5.N_TB_bits;
     
     % bits per symbol
-    N_bps = txx.phy_4_5.mcs.N_bps;
+    N_bps = tx.phy_4_5.mcs.N_bps;
 
     % Local variables for a single MCS, required for parfor.
     % Each worker can write into these arrays.
@@ -142,8 +142,8 @@ for mcs_index = mcs_index_vec
         warning('off');
         
         % copy handle objects, changes within parfor are not permanent!
-        tx = txx;
-        rx = rxx;
+        txx = tx;
+        rxx = rx;
         
         power_cnt = 0;
         power_tx = 0;
@@ -156,36 +156,19 @@ for mcs_index = mcs_index_vec
         n_bits_PDC_sent = 0;
         n_bits_PDC_error = 0;
         n_packets_PDC_error = 0;
-                
-        % extract variables for wiener weights
-        if strcmp(rx.mac_meta.active_ch_estim_type,'wiener') == true
-            physical_resource_mapping_DRS_cell  = tx.phy_4_5.physical_resource_mapping_DRS_cell;
-            N_b_DFT                             = tx.phy_4_5.numerology.N_b_DFT;
-            N_PACKET_symb                       = tx.phy_4_5.N_PACKET_symb;
-            N_b_CP                              = tx.phy_4_5.numerology.N_b_CP;
-            samp_rate                           = tx.phy_4_5.numerology.B_u_b_DFT;
-            noise_estim_wiener               	= 1/10^(snr_db_vec(i)/10);
-            f_d_hertz_wiener                    = 20;
-            tau_rms_sec_wiener                  = 363e-9;
 
-            % the wiener filter for each snr
-            rx.wiener = lib_rx.channel_estimation_wiener_weights(physical_resource_mapping_DRS_cell,...
-                                                                    N_b_DFT,...
-                                                                    N_PACKET_symb,...
-                                                                    N_b_CP,...
-                                                                    samp_rate,...
-                                                                    noise_estim_wiener, f_d_hertz_wiener, tau_rms_sec_wiener);
-        end
+        % adapt Wiener coefficients to channel conditions
+        rxx.overwrite_wiener(1/10^(snr_db_vec(i)/10), 20, 363e-9);
 
         % create channel
         ch                      = lib_rf_channel.rf_channel();
         ch.verbose              = verbose;
-        ch.verbose_cp           = tx.phy_4_5.numerology.N_b_CP*tx.mac_meta.oversampling;
+        ch.verbose_cp           = txx.phy_4_5.numerology.N_b_CP*txx.mac_meta.oversampling;
         ch.type                 = 'rician';
         ch.amp                  = 1.0;
         ch.noise                = true;
         ch.snr_db             	= snr_db_vec(i);
-        ch.spectrum_occupied    = tx.phy_4_5.n_spectrum_occupied/tx.mac_meta.oversampling;
+        ch.spectrum_occupied    = txx.phy_4_5.n_spectrum_occupied/txx.mac_meta.oversampling;
         ch.N_TX                	= N_TX;
         ch.N_RX               	= N_RX;
         ch.awgn_random_source   = 'global';
@@ -198,25 +181,25 @@ for mcs_index = mcs_index_vec
         ch.r_sto                = 0;
         ch.r_cfo                = 0;
         ch.r_err_phase          = 0;
-        ch.r_samp_rate        	= tx.phy_4_5.numerology.B_u_b_DFT*tx.mac_meta.oversampling;
+        ch.r_samp_rate        	= txx.phy_4_5.numerology.B_u_b_DFT*txx.mac_meta.oversampling;
         ch.r_max_doppler     	= 1.946;                            % 1.946 19.458
         ch.r_type   	        = 'TDL-v';
         ch.r_DS_desired         = 10^(-7.03 + 0.00*randn(1,1));
         ch.r_K                  = db2pow(9.0 + 0.00*randn(1,1));    %93e-9;
         ch.r_interpolation      = true;
-        ch.r_gains_active 	    = true;
+        ch.r_gains_active       = true;
         ch.init_rayleigh_rician_channel();
 
         for j=1:1:n_packets_per_snr
 
             % give rx handles so it can debug
-            rx.tx_handle = tx;
-            rx.ch_handle = ch;
+            rxx.tx_handle = txx;
+            rxx.ch_handle = ch;
             
             % generate random PCC bits
-            if tx.mac_meta.PLCF_type == 1
+            if txx.mac_meta.PLCF_type == 1
                 PCC_user_bits = randi([0 1], 40, 1);
-            elseif tx.mac_meta.PLCF_type == 2
+            elseif txx.mac_meta.PLCF_type == 2
                 PCC_user_bits = randi([0 1], 80, 1);
             end
 
@@ -235,21 +218,21 @@ for mcs_index = mcs_index_vec
 
                 % there is a specific order for the redundany version
                 if mod(z,4) == 0
-                    tx.mac_meta.rv = 0; % initial transmission
-                    rx.mac_meta.rv = 0; % initial transmission
+                    txx.mac_meta.rv = 0; % initial transmission
+                    rxx.mac_meta.rv = 0; % initial transmission
                 elseif mod(z,4) == 1
-                    tx.mac_meta.rv = 2;
-                    rx.mac_meta.rv = 2;
+                    txx.mac_meta.rv = 2;
+                    rxx.mac_meta.rv = 2;
                 elseif mod(z,4) == 2
-                    tx.mac_meta.rv = 3;
-                    rx.mac_meta.rv = 3;
+                    txx.mac_meta.rv = 3;
+                    rxx.mac_meta.rv = 3;
                 elseif mod(z,4) == 3
-                    tx.mac_meta.rv = 1;
-                    rx.mac_meta.rv = 1;
+                    txx.mac_meta.rv = 1;
+                    rxx.mac_meta.rv = 1;
                 end
 
                 % let tx create the packet
-                samples_antenna_tx = tx.generate_packet(PCC_user_bits, PDC_user_bits);
+                samples_antenna_tx = txx.generate_packet(PCC_user_bits, PDC_user_bits);
 
                 % pass samples through channel
                 samples_antenna_rx = ch.pass_samples(samples_antenna_tx, 0);
@@ -264,15 +247,15 @@ for mcs_index = mcs_index_vec
 
                 % Now let rx decode the frame.
                 % Rx can do so because it's mac_meta is the exact same.
-                [PCC_user_bits_recovered, PDC_user_bits_recovered] = rx.demod_decode_packet(samples_antenna_rx);
+                [PCC_user_bits_recovered, PDC_user_bits_recovered] = rxx.demod_decode_packet(samples_antenna_rx);
                 
                 % measure the BER uncoded
                 
-                n_bits_PCC_sent = n_bits_PCC_sent + numel(tx.packet_data.pcc_enc_dbg.d);
-                n_bits_PCC_error = n_bits_PCC_error + sum(abs(double(tx.packet_data.pcc_enc_dbg.d) - double(rx.packet_data.pcc_dec_dbg.d_hard)));                
+                n_bits_PCC_sent = n_bits_PCC_sent + numel(txx.packet_data.pcc_enc_dbg.d);
+                n_bits_PCC_error = n_bits_PCC_error + sum(abs(double(txx.packet_data.pcc_enc_dbg.d) - double(rxx.packet_data.pcc_dec_dbg.d_hard)));                
                 
-                n_bits_PDC_sent = n_bits_PDC_sent + numel(tx.packet_data.pdc_enc_dbg.d);
-                n_bits_PDC_error = n_bits_PDC_error + sum(abs(double(tx.packet_data.pdc_enc_dbg.d) - double(rx.packet_data.pdc_dec_dbg.d_hard)));
+                n_bits_PDC_sent = n_bits_PDC_sent + numel(txx.packet_data.pdc_enc_dbg.d);
+                n_bits_PDC_error = n_bits_PDC_error + sum(abs(double(txx.packet_data.pdc_enc_dbg.d) - double(rxx.packet_data.pdc_dec_dbg.d_hard)));
                 
                 % we might be done
                 if numel(PCC_user_bits_recovered) ~= 0
@@ -291,9 +274,9 @@ for mcs_index = mcs_index_vec
             end
 
             % delete harq buffer
-            rx.harq_buf_40 = [];
-            rx.harq_buf_80 = [];
-            rx.harq_buf = [];
+            rxx.harq_buf_40 = [];
+            rxx.harq_buf_80 = [];
+            rxx.harq_buf = [];
             
             % check if frame was decoded correctly, maybe there's still an error despite all the harq iterations
             if pcc_decoded_successfully == false

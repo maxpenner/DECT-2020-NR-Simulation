@@ -11,9 +11,9 @@ per_global = n_packets_PCC_error_global./n_packets_PCC_sent_global;
 % overwrite, fixed for PCC, always QPSK
 bps_global = ones(size(bps_global))*2;
 
-if txx.mac_meta.PLCF_type == 1
+if tx.mac_meta.PLCF_type == 1
     plcf_length = 40;
-elseif txx.mac_meta.PLCF_type == 2
+elseif tx.mac_meta.PLCF_type == 2
     plcf_length = 80;
 else
     error('Unknown PLCF length.');

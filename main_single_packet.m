@@ -87,35 +87,11 @@ mac_meta_rx.synchronization.drs.cfo_config.active_residual = true;
 % channel estimation parameters (see +lib_rx/channel_estimation_wiener.m)
 mac_meta_rx.active_ch_estim_type = 'wiener';
 
-% if we are using a wiener filter for channel esimation
-if strcmp(mac_meta_rx.active_ch_estim_type,'wiener') == true
-
-    % best case assumption for SNR, worst case assumptions for doppler and delay spread
-    noise_estim_wiener               	= 1/10^(30/10);
-    f_d_hertz_wiener                    = 100;
-    tau_rms_sec_wiener                  = 300e-9;
-
-    % the wiener filter coefficients
-    wiener = lib_rx.channel_estimation_wiener_weights(  tx.phy_4_5.physical_resource_mapping_DRS_cell,...    % where are the pilots tones located?
-                                                        tx.phy_4_5.numerology.N_b_DFT,...
-                                                        tx.phy_4_5.N_PACKET_symb,...
-                                                        tx.phy_4_5.numerology.N_b_CP, ...
-                                                        tx.phy_4_5.numerology.B_u_b_DFT,...
-                                                        noise_estim_wiener, ...
-                                                        f_d_hertz_wiener, ...
-                                                        tau_rms_sec_wiener);
-end
-
 % channel equalization/detection (see dect_rx.m)
 mac_meta_rx.active_equalization_detection = true;
 
 % create actual receiver
 rx = dect_rx(verbose, mac_meta_rx);
-
-% save receiver independent wiener coefficients
-if strcmp(rx.mac_meta.active_ch_estim_type,'wiener') == true
-    rx.wiener = wiener;
-end
 
 %% create channel
 
@@ -150,7 +126,7 @@ ch.r_type   	        = 'TDL-iii';
 ch.r_DS_desired         = 10^(-7.03 + 0.00*randn(1,1));
 ch.r_K                  = db2pow(9.0 + 0.00*randn(1,1));    %93e-9;
 ch.r_interpolation      = true;
-ch.r_gains_active 	    = true;
+ch.r_gains_active       = true;
 ch.init_rayleigh_rician_channel();
 
 %% give rx handles so it can debug, e.g. perfect channel knowledge
