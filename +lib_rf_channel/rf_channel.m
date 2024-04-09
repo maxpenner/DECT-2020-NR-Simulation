@@ -640,6 +640,14 @@ classdef rf_channel < handle
                 avgPathGains_linear = avgPathGains_beforeInterpolation_linear;
             end
 
+            % normalize
+            avgPathGains_beforeInterpolation_linear = avgPathGains_beforeInterpolation_linear/sqrt(sum(avgPathGains_beforeInterpolation_linear.^2));
+            avgPathGains_beforeInterpolation = pow2db(avgPathGains_beforeInterpolation_linear);
+
+            % normalize (Matlab also normalizes)
+            avgPathGains_linear = avgPathGains_linear/sqrt(sum(avgPathGains_linear.^2));
+            avgPathGains = pow2db(avgPathGains_linear);
+
             % plot Path gains in dB and linear
             if obj.verbose > 1
                 figure()
@@ -649,7 +657,7 @@ classdef rf_channel < handle
                 plot(pathDelays_beforeInterpolation, avgPathGains_beforeInterpolation_linear, 'b-o');
                 hold on
                 plot(pathDelays, avgPathGains_linear,'r-x');
-                title('Path Gains linear (before normalization)');
+                title('Path Gains linear');
                 xlabel('Time');
                 ylabel('Path Gain');
                 legend('ITU', 'Interpolation');
@@ -662,18 +670,12 @@ classdef rf_channel < handle
                 plot(pathDelays_beforeInterpolation, avgPathGains_beforeInterpolation, 'b-o');
                 hold on
                 plot(pathDelays, avgPathGains, 'r-x');
-                title('Path Gains logarithmic (before normalization)');
+                title('Path Gains logarithmic');
                 xlabel('Time');
                 ylabel('Path Gain (dB)');
                 legend('ITU', 'Interpolation');
                 grid on
             end                
-
-            % normalize (Matlab also normalizes)
-            if 1==1
-                avgPathGains_linear = avgPathGains_linear/sqrt(sum(avgPathGains_linear.^2));
-            end
-            avgPathGains = pow2db(avgPathGains_linear);
             
             % sanity checks
             if numel(pathDelays) ~= numel(unique(pathDelays))
