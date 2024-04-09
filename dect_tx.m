@@ -45,6 +45,7 @@ classdef dect_tx < handle
             n_total_bits        = obj.phy_4_5.n_total_bits;
             n_spectrum_occupied = obj.phy_4_5.n_spectrum_occupied;
 
+            b                   = obj.mac_meta.b;
             u                   = obj.mac_meta.u;
             Z                   = obj.mac_meta.Z;
             codebook_index      = obj.mac_meta.codebook_index;
@@ -135,7 +136,7 @@ classdef dect_tx < handle
                                                                                                             oversampling);
 
             % apply STF cover sequence
-            samples_antenna_tx = lib_6_generic_procedures.STF_signal_cover_sequence(samples_antenna_tx, u, oversampling);
+            samples_antenna_tx = lib_6_generic_procedures.STF_signal_cover_sequence(samples_antenna_tx, u, b*oversampling);
 
             %% save packet data for debugging
             obj.packet_data.x_PCC = x_PCC;

@@ -1,7 +1,7 @@
 function metric = sync_STO_coarse_metric(window, M, L, detection_E_rms_threshold)
 
-    % M is the oversampled length of a pattern, by dividing with 16 we get the oversampling itself
-    oversampling = M/16;
+    % M is the length of a single pattern, by dividing with 16 we get the value of beta * oversampling
+    b_times_oversampling = M/16;
 
     % revert STF cover sequence by applying it
     if L == 7
@@ -9,7 +9,7 @@ function metric = sync_STO_coarse_metric(window, M, L, detection_E_rms_threshold
     else
         u=2; % can also be 4 or 8
     end
-    window = lib_6_generic_procedures.STF_signal_cover_sequence(window, u, oversampling);
+    window = lib_6_generic_procedures.STF_signal_cover_sequence(window, u, b_times_oversampling);
     
     % separate into repetitive pattern
     window = reshape(window, M, L);
