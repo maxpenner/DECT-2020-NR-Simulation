@@ -1,8 +1,12 @@
-function [wiener_weights_all_tx] = channel_estimation_wiener_weights(physical_resource_mapping_DRS_cell, N_b_DFT, N_PACKET_symb, N_b_CP, samp_rate, noise_estim, f_d_hertz, tau_rms_sec)
-
-    % how many of the closest pilots do we include for wiener filtering?
-    n_closest_pilots = 12;
-
+function [wiener_weights_all_tx] = channel_estimation_wiener_weights(   physical_resource_mapping_DRS_cell, ...
+                                                                        N_closest_DRS_pilots, ...
+                                                                        N_b_DFT, ...
+                                                                        N_PACKET_symb, ...
+                                                                        N_b_CP, ...
+                                                                        samp_rate, ...
+                                                                        noise_estim, ...
+                                                                        f_d_hertz, ...
+                                                                        tau_rms_sec)
     % frame parameters
     T_s_sec = 1/samp_rate;                      % sample time in seconds
     T_symb_sec = T_s_sec * (N_b_DFT + N_b_CP);  % length of symbol (CP included) in seconds
@@ -15,7 +19,7 @@ function [wiener_weights_all_tx] = channel_estimation_wiener_weights(physical_re
     N_p = numel(cell2mat(physical_resource_mapping_DRS_cell(1, end)));
     
     % how many of those pilots do we actually use?
-    N_p_used = min(N_p, n_closest_pilots);
+    N_p_used = min(N_p, N_closest_DRS_pilots);
     
     % output, we save wiener filters for each transmit antenna
     wiener_weights_all_tx = cell(N_TX,1);
@@ -48,7 +52,7 @@ function [wiener_weights_all_tx] = channel_estimation_wiener_weights(physical_re
                 distances = sqrt(delta_t.^2 + delta_f.^2);
 
                 % find indices of closest pilots
-                [~,idx_pilots_used] = mink(distances, n_closest_pilots);
+                [~,idx_pilots_used] = mink(distances, N_closest_DRS_pilots);
                 
                 % sanity check
                 if numel(idx_pilots_used) ~= N_p_used
