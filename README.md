@@ -18,11 +18,9 @@ The complete physical layer of a DECT-2020 NR transmitter is implemented. This i
 
 ## Main Scripts
 - **main_single_packet.m**: Simple example demonstrating how to use the simulation environment. Creates a DECT-2020 NR packet, sends it through a wireless channel and decodes it.
-- **main_BER_PER_over_MCS.m**: Parallel simulation of packet error rates over SNRs.
-- **main_BER_PER_over_MCS_convergence.m**: Same as **main_BER_PER_over_MCS.m**, but optimized for fast convergence at each SNR.
-- **main_BER_PER_over_MCS_convergence_full.m**: Same as **main_BER_PER_over_MCS_convergence.m**, but including resampling, an ADC model as well as synchronization of STO and CFO.
-- **main_BER_PER_over_MCS_plot_PCC.m**: Plot simulation results of above scripts for PCC.
-- **main_BER_PER_over_MCS_plot_PDC.m**: Plot simulation results of above scripts for PDC.
+- **main_BER_PER_over_MCS.m**: Parallel simulation of bit and packet error rates over MCS.
+- **main_BER_PER_over_MCS_plot_PCC.m**: Plot results of **main_BER_PER_over_MCS.m** for PCC.
+- **main_BER_PER_over_MCS_plot_PDC.m**: Plot results of **main_BER_PER_over_MCS.m** for PDC.
 
 ## Requirements
 The Matlab LTE Toolbox is required for channel coding, the Parallel Computing Toolbox for reducing simulation time and the Communications Toolbox for wireless channel simulation.
