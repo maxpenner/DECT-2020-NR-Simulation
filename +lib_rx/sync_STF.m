@@ -59,6 +59,10 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
         end
     end
 
+    % With the new cover sequence, the coarse metric is far more narrow. After detection, we jump back back a few samples to make sure we find
+    % the coarse peak.
+    coarse_threshold_crossing_idx = coarse_threshold_crossing_idx - sto_config.threshold.jump_pack;
+
     % keep the antennas at which we found a preamble
     coarse_threshold_crossing_idx = coarse_threshold_crossing_idx(coarse_threshold_crossing_idx > 0);
 
@@ -137,18 +141,30 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
 
             subplot(2,1,1)
             plot(abs(metric));
-            xline(cpi, 'r');
+  
+            yline(sto_config.threshold.value, 'r');
+            text(0,sto_config.threshold.value + 0.05,'Detection Threshold')
+
+            xline(cpi, 'r-.');
+
             str = append('Coarse Synchronization Metric for antenna ', num2str(i));
             title(str);
             ylim([0 1.2]);
+            grid on
 
             subplot(2,1,2)
             plot(abs(metric_mm));
-            xline(cpi, 'r');
+
+            yline(sto_config.threshold.value, 'r');
+            text(0,sto_config.threshold.value + 0.05,'Detection Threshold')
+
+            xline(cpi, 'r-.');
+            text(cpi,cph,'Coarse Peak')
+
             str = append('Coarse Synchronization Metric after movmean for antenna ', num2str(i));
             title(str);
             ylim([0 1.2]);
-            xline(cpi, 'r');
+            grid on
         end
     end
 
@@ -255,16 +271,22 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
             % perform a cross correlation between the samples and the stf template
             metric = abs(lib_rx.sync_xcorr(samples_antenna_single_search_range, STF_template_candidate));
 
+            % this maximum is local
+            [max_val, max_idx] = max(abs(metric));
+
             % debugging
             if verbose > 2
                 figure()
-                plot(abs(metric));
-                str = append('Synchronization Metric for antenna ', num2str(i), ' and stf ', num2str(j));
-                title(str);
-            end
 
-            % this maximum is local
-            [~, max_idx] = max(abs(metric));
+                plot(abs(metric));
+
+                xline(max_idx, 'r-.');
+                text(max_idx,max_val,'Fine Peak')
+
+                str = append('Fine Synchronization Metric for antenna ', num2str(i), ' and STF ', num2str(j));
+                title(str);
+                grid on
+            end
 
             % save the maximum
             metric_maxima(j,i) = abs(metric(max_idx));
