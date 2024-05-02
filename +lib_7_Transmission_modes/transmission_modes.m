@@ -80,7 +80,7 @@ function [t_modes] = transmission_modes(tm_mode_0_to_11)
             error('Unknown transmission mode %f.', tm_mode_0_to_11);
     end
     
-    t_modes.mode_0_to_1 = tm_mode_0_to_11;
+    t_modes.mode_0_to_11 = tm_mode_0_to_11;
     t_modes.N_eff_TX = N_eff_TX;
     t_modes.N_SS = N_SS;
     t_modes.CL = CL;

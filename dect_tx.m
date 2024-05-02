@@ -26,7 +26,7 @@ classdef dect_tx < handle
 
             verbose_        = obj.verbose;
 
-            mode_0_to_1     = obj.phy_4_5.tm_mode.mode_0_to_1;
+            mode_0_to_11    = obj.phy_4_5.tm_mode.mode_0_to_11;
             N_SS            = obj.phy_4_5.tm_mode.N_SS;
             CL              = obj.phy_4_5.tm_mode.CL;
             N_TS            = obj.phy_4_5.tm_mode.N_TS;
@@ -63,7 +63,7 @@ classdef dect_tx < handle
 
             % The receiver needs to know if signal is beamformed or not for channel sounding purposes.
             % 7.2
-            if mode_0_to_1 == 0
+            if mode_0_to_11 == 0
                 precoding_identity_matrix = true;
             else
                 if codebook_index == 0
@@ -102,7 +102,7 @@ classdef dect_tx < handle
             else
                 y_PCC_ts = x_PCC_ss;
             end
-            if ismember(mode_0_to_1, [1,5,10]) == true
+            if ismember(mode_0_to_11, [1,5,10]) == true
                 y_PDC_ts = lib_6_generic_procedures.Transmit_diversity_precoding(x_PDC_ss, N_TS);
             else
                 y_PDC_ts = x_PDC_ss;

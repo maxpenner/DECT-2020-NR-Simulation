@@ -89,7 +89,7 @@ classdef dect_rx < handle
             harq_buf_           = obj.harq_buf;
             wiener_             = obj.wiener;
         
-            mode_0_to_1         = obj.phy_4_5.tm_mode.mode_0_to_1;
+            mode_0_to_11        = obj.phy_4_5.tm_mode.mode_0_to_11;
             N_eff_TX            = obj.phy_4_5.tm_mode.N_eff_TX;
 
             modulation0         = obj.phy_4_5.mcs.modulation0;
@@ -237,7 +237,7 @@ classdef dect_rx < handle
                 % MISO (Alamouti) and MIMO (Alamouti + MRC)
                 else
                     % Transmit diversity precoding
-                    if ismember(mode_0_to_1, [1,5,10]) == true
+                    if ismember(mode_0_to_11, [1,5,10]) == true
                         x_PCC_rev = lib_rx.equalization_MISO_MIMO_alamouti_mrc(antenna_streams_mapped_rev, ch_estim, N_RX, N_eff_TX, physical_resource_mapping_PCC_cell);
                         x_PDC_rev = lib_rx.equalization_MISO_MIMO_alamouti_mrc(antenna_streams_mapped_rev, ch_estim, N_RX, N_eff_TX, physical_resource_mapping_PDC_cell);
                     end
