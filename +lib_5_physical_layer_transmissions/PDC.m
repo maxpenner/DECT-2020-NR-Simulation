@@ -24,7 +24,7 @@
 %            {56×1 double}    {56×1 double}    {56×1 double}    {42×1 double}    {56×1 double}    {56×1 double}    {1×6 double}    {322×1 double}
 %
 %
-function [physical_resource_mapping_PDC_cell, N_PDC_subc] = PDC(u, numerology, k_b_OCC, N_PACKET_symb, N_TS, N_eff_TX,...
+function [physical_resource_mapping_PDC_cell, N_PDC_re] = PDC(u, numerology, k_b_OCC, N_PACKET_symb, N_TS, N_eff_TX,...
                                                                 physical_resource_mapping_STF_cell,...
                                                                 physical_resource_mapping_DRS_cell,...
                                                                 physical_resource_mapping_PCC_cell)
@@ -76,12 +76,12 @@ function [physical_resource_mapping_PDC_cell, N_PDC_subc] = PDC(u, numerology, k
         nof_OFDM_symbols_carying_DRS = nof_OFDM_symbols_carying_DRS + 1;
     end
 
-    N_DRS_subc = N_eff_TX * N_b_OCC/4 * nof_OFDM_symbols_carying_DRS;
+    N_DRS_re = N_eff_TX * N_b_OCC/4 * nof_OFDM_symbols_carying_DRS;
     
     % according to 5.2.4
-    N_PCC_subc = 98;
+    N_PCC_re = 98;
     
-    N_PDC_subc = N_DF_symb * N_b_OCC - N_DRS_subc - N_PCC_subc;
+    N_PDC_re = N_DF_symb * N_b_OCC - N_DRS_re - N_PCC_re;
 
     %% extract subcarrier and symbol index for PDC
     
@@ -103,7 +103,7 @@ function [physical_resource_mapping_PDC_cell, N_PDC_subc] = PDC(u, numerology, k
     l = 1;
     
     % counter for found PDC subcarriers
-    cnt_PDC_subc = 0;
+    N_PDC_re_cnt = 0;
     
     % loop over each ofdm sybol in Data Field (DF)
     for q = 1:1:N_DF_symb
@@ -128,7 +128,7 @@ function [physical_resource_mapping_PDC_cell, N_PDC_subc] = PDC(u, numerology, k
 
         % append subcarriers for this ofdm symbol
         physical_resource_mapping_PDC_cell = [physical_resource_mapping_PDC_cell {k_i}];
-        cnt_PDC_subc = cnt_PDC_subc + numel(k_i);
+        N_PDC_re_cnt = N_PDC_re_cnt + numel(k_i);
                 
         % remember current ofdm symbol
         ofdm_symbol_indices = [ofdm_symbol_indices, l];
@@ -136,9 +136,11 @@ function [physical_resource_mapping_PDC_cell, N_PDC_subc] = PDC(u, numerology, k
         % move to next of ofdm symbol
         l = l + 1;
     end   
+
+    assert(N_PDC_re == N_PDC_re_cnt, "incorrect number of N_PDC_re");
     
     %% create a vector with linear indices
-    linear_indices_matlab = zeros(cnt_PDC_subc, 1);
+    linear_indices_matlab = zeros(N_PDC_re_cnt, 1);
     idx = 1;
     for i=1:1:numel(ofdm_symbol_indices)
         
@@ -153,12 +155,9 @@ function [physical_resource_mapping_PDC_cell, N_PDC_subc] = PDC(u, numerology, k
         linear_indices_matlab(idx : idx + n_k_i - 1) = li_matlab;
         
         idx = idx + n_k_i;
-    end  
-    
-    % sanity check
-    if idx-1 ~= cnt_PDC_subc
-        error('Incorrect number of linear indices.');
     end
+
+    assert(idx-1 == N_PDC_re_cnt, "incorrect number of linear indices");
     
     %% write result
     physical_resource_mapping_PDC_cell = [physical_resource_mapping_PDC_cell {ofdm_symbol_indices} {linear_indices_matlab}];
