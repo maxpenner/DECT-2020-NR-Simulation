@@ -22,9 +22,9 @@ set(groot,'defaultTextInterpreter','latex');
 mac_meta_tx.u = 1;                                  % mu = 1, 2, 4 or 8
 mac_meta_tx.b = 1;                                  % beta = 1, 2, 4, 8, 12 or 16
 mac_meta_tx.PacketLengthType = 0;                   % 0 for subslots, 1 for slots
-mac_meta_tx.PacketLength = 10;                      % min is 1, max is 16 according to Table 6.2.1-2a in part 4
+mac_meta_tx.PacketLength = 4;                       % min is 1, max is 16 according to Table 6.2.1-2a in part 4
 mac_meta_tx.tm_mode_0_to_11 = 0;                    % Table 7.2-1, mode determines wether transmission is closed loop or not, values range from 0 to 11
-mac_meta_tx.mcs_index = 1;                          % Table A-1 in part 3, values range from 0 to 11
+mac_meta_tx.mcs_index = 5;                          % Table A-1 in part 3, values range from 0 to 11
 mac_meta_tx.Z = 6144;                               % 5.3 -> so far only Z=6144 fully supported, 2048 only at TX, RX missing (Matlab has no option for Z=2048 in LTE toolbox)
 mac_meta_tx.oversampling = 8;                       % By how much do we oversample our ofdm packet compared to critical sampling (insert zeros at specturm edges before IFFT)?
 mac_meta_tx.codebook_index = 0;                     % 6.3.4, any value other than 0 makes packet beamformed, throws error if out of bound (depends on tm_mode_0_to_11)
@@ -68,7 +68,16 @@ mac_meta_rx = mac_meta_tx;
 % number of antennas at the receiver
 mac_meta_rx.N_RX = 2;
 
-% synchronization based on STF
+% Synchronization based on STF (typically link-layer-simulations do not include synchronization)
+%
+% If synchronization is turned on (i.e. mac_meta_rx.synchronization.stf.active = true) the receiver class dect_rx will try
+% synchronize a packet before decoding it. For that, the dect_rx member function demod_decode_packet(samples_antenna_rx) must
+% be called with samples_antenna_rx having more samples than samples_antenna_tx.
+%
+% If synchronization is turned off (i.e. mac_meta_rx.synchronization.stf.active = false) the dect_rx member
+% function demod_decode_packet(samples_antenna_rx) must be called with samples_antenna_tx having the exact same number
+% of samples as samples_antenna_tx, but not necessarily the same number of antennas (depends on MIMO mode).
+%
 mac_meta_rx.synchronization.stf.active = true;
 if mac_meta_rx.synchronization.stf.active == true
 
@@ -81,25 +90,19 @@ if mac_meta_rx.synchronization.stf.active == true
     mac_meta_rx.synchronization.stf.cfo_config.active_integer = true;
 end
 
-% synchronization based on DRS (residual CFO)
+% synchronization of residual CFO based on DRS, not STF
 mac_meta_rx.synchronization.drs.cfo_config.active_residual = true;
-
-% channel estimation parameters (see +lib_rx/channel_estimation_wiener.m)
-mac_meta_rx.active_ch_estim_type = 'wiener';
-
-% channel equalization/detection (see dect_rx.m)
-mac_meta_rx.active_equalization_detection = true;
 
 % create actual receiver
 rx = dect_rx(verbose, mac_meta_rx);
 
-%% create channel
+%% create channel, can be replaced with a custom channel type
 
 % number of antennas at TX and RX
 N_TX = tx.phy_4_5.tm_mode.N_TX;
 N_RX = rx.mac_meta.N_RX;
 
-% RF channel parameters (see +lib_rf_channel/rf_channel.m)
+% RF channel parameters (see +lib_rf_channel/rf_channel.m) valid for all channel types.
 ch                      = lib_rf_channel.rf_channel();
 ch.verbose              = verbose;
 ch.verbose_cp           = tx.phy_4_5.numerology.N_b_CP*tx.mac_meta.oversampling;
@@ -112,9 +115,13 @@ ch.N_TX                 = N_TX;
 ch.N_RX                 = N_RX;
 ch.awgn_random_source   = 'global';
 ch.awgn_randomstream    = RandStream('mt19937ar','Seed', randi(1e9,[1 1]));
+
+% Parameters with d_ only used if ch.type = 'deterministic'. It is called deterministic because STO, CFO and error phase have fixed, known values.
 ch.d_sto                = 123 + 2*size(samples_antenna_tx, 1);
 ch.d_cfo                = 1.7*(1/(tx.phy_4_5.numerology.N_b_DFT*tx.mac_meta.oversampling));
 ch.d_err_phase          = deg2rad(123);
+
+% Parameters with r_ only used if ch.type = 'rayleigh' or 'rician'.
 ch.r_random_source      = 'global';
 ch.r_seed    	        = randi(1e9,[1 1]);
 ch.r_sto                = ch.d_sto;
@@ -162,4 +169,3 @@ end
 
 %profile viewer
 %profile off
-

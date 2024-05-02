@@ -20,6 +20,16 @@ classdef dect_rx < handle
     
     methods
         function obj = dect_rx(verbose_arg, mac_meta_arg)
+            % if channel estimation type is not specifically defined, use Wiener as a default
+            if ~isfield(mac_meta_arg, 'active_ch_estim_type')
+                mac_meta_arg.active_ch_estim_type = 'wiener';
+            end
+
+            % if equalization/detection is not specifically turned off, activate if by default
+            if ~isfield(mac_meta_arg, 'active_equalization_detection')
+                mac_meta_arg.active_equalization_detection = true;
+            end
+
             obj.verbose = verbose_arg;
             obj.mac_meta = mac_meta_arg;
             obj.phy_4_5 = lib_util.run_chapter_4_5(verbose_arg, mac_meta_arg);
@@ -29,7 +39,7 @@ classdef dect_rx < handle
             obj.tx_handle = [];
             obj.ch_handle = [];
 
-            % we only load the templates if they are needed
+            % we only load STF templates if they are needed
             if mac_meta_arg.synchronization.stf.active == true
                 obj.STF_templates = lib_rx.sync_STF_template(mac_meta_arg);
             end

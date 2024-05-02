@@ -32,8 +32,9 @@ max_harq_retransmissions = 0;
 snr_db_vec_global = -10 : 1.0 : 30;
 snr_db_vec_global = repmat(snr_db_vec_global,numel(mcs_index_vec),1);
 
-% packets per mcs and snr
-n_packets_per_snr = 0.1e3;
+% Packets per mcs and snr.
+% Increase this number to get smoother curves.
+n_packets_per_snr = 0.5e3;
 
 % we measure the power
 power_tx_global = zeros(numel(mcs_index_vec), numel(snr_db_vec_global(1,:)));
@@ -99,12 +100,6 @@ for mcs_index = mcs_index_vec
     
     % synchronization based on DRS (residual CFO)
     mac_meta_rx.synchronization.drs.cfo_config.active_residual = false;
-
-    % channel estimation
-    mac_meta_rx.active_ch_estim_type = 'wiener';
-    
-    % channel equalization
-    mac_meta_rx.active_equalization_detection = true;
 
     % create rx
     rx = dect_rx(verbose, mac_meta_rx);
