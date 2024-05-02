@@ -240,10 +240,10 @@ classdef dect_rx < handle
                     if ismember(mode_0_to_11, [1,5,10]) == true
                         x_PCC_rev = lib_rx.equalization_MISO_MIMO_alamouti_mrc(antenna_streams_mapped_rev, ch_estim, N_RX, N_eff_TX, physical_resource_mapping_PCC_cell);
                         x_PDC_rev = lib_rx.equalization_MISO_MIMO_alamouti_mrc(antenna_streams_mapped_rev, ch_estim, N_RX, N_eff_TX, physical_resource_mapping_PDC_cell);
-                    end
-
                     % MIMO modes with more than one spatial stream
-                    % TODO
+                    else
+                        error("MIMO modes with N_SS>1 not implemented yet.");
+                    end
                 end
                 
             % no equalization, a great debugging tool when using awgn channel
