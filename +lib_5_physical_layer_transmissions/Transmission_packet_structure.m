@@ -31,7 +31,6 @@ function [N_PACKET_symb] = Transmission_packet_structure(numerology, PacketLengt
     tx_packet_len_GI = 4/9*numerology.T_u_symb;
 
     % sanity check
-    %assert(tx_packet_len == tx_packet_len_STF+tx_packet_len_DF+tx_packet_len_GI);
-    lib_dbg.check_equality_of_two_numbers(tx_packet_len, tx_packet_len_STF+tx_packet_len_DF+tx_packet_len_GI, 1e-6);
+    assert(round(tx_packet_len) == round(tx_packet_len_STF+tx_packet_len_DF+tx_packet_len_GI));
 end
 
