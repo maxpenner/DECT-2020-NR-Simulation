@@ -180,25 +180,10 @@ classdef dect_rx < handle
             % Now that we know the length of the packet from the PCC, we can determine a channel estimate.
             % Output is a cell(N_RX,1), each cell with a matrix of size N_b_DFT x N_PACKET_symb x N_TX.
             % For subcarriers which are unused the channel estimate can be NaN or +/- infinity.
-            if strcmp(active_ch_estim_type,'perfect') == true
+            if strcmp(active_ch_estim_type,'wiener') == true
 
-                % only for AWGN OR rayleigh/rician with doppler frequency of 0 and flat fading
-                ch_estim = lib_rx.channel_estimation_perfect(antenna_streams_mapped_rev, N_RX, N_eff_TX, ch_handle_);
-
-            elseif strcmp(active_ch_estim_type,'perfect SIMO') == true
-                
-                % this is a cheap trick: we take the time domain samples without noise, FFT and take the effective channel ceofficients as a channel estimate
-                antenna_streams_mapped_rev_no_noise = lib_6_generic_procedures.ofdm_signal_generation_Cyclic_prefix_insertion_rev(  ch_handle_.samples_antenna_rx_no_noise,...
-                                                                                                                                    k_b_OCC,...
-                                                                                                                                    N_PACKET_symb,...
-                                                                                                                                    N_RX,...
-                                                                                                                                    N_eff_TX,...
-                                                                                                                                    N_b_DFT,...
-                                                                                                                                    u,...
-                                                                                                                                    N_b_CP,...
-                                                                                                                                    oversampling);                
-                
-                ch_estim = lib_rx.channel_estimation_perfect_SIMO(antenna_streams_mapped_rev_no_noise, N_RX, N_eff_TX, tx_handle_);  
+                % real world channel estimation based on precalculated wiener filter coefficients assuming worst-case channel conditions
+                ch_estim = lib_rx.channel_estimation_wiener(antenna_streams_mapped_rev, physical_resource_mapping_DRS_cell, wiener_, N_RX, N_eff_TX);
 
             elseif strcmp(active_ch_estim_type,'least squares') == true
 
@@ -207,10 +192,6 @@ classdef dect_rx < handle
                 % The error floor is comes from only considering the closest neighbours.
                 ch_estim = lib_rx.channel_estimation_ls(antenna_streams_mapped_rev, physical_resource_mapping_STF_cell, physical_resource_mapping_DRS_cell, N_RX, N_eff_TX);
 
-            elseif strcmp(active_ch_estim_type,'wiener') == true
-
-                % real world channel estimation based on precalculated wiener filter coefficients assuming worst-case channel conditions
-                ch_estim = lib_rx.channel_estimation_wiener(antenna_streams_mapped_rev, physical_resource_mapping_DRS_cell, wiener_, N_RX, N_eff_TX);
 
             else
                 error('Unknown channel estimation type %s.', active_ch_estim_type);
@@ -234,7 +215,7 @@ classdef dect_rx < handle
                     x_PCC_rev = lib_rx.equalization_SIMO_mrc(antenna_streams_mapped_rev, ch_estim, physical_resource_mapping_PCC_cell, N_RX);
                     x_PDC_rev = lib_rx.equalization_SIMO_mrc(antenna_streams_mapped_rev, ch_estim, physical_resource_mapping_PDC_cell, N_RX);
 
-                % MISO (Alamouti) and MIMO (Alamouti + MRC)
+                % MISO (Alamouti) and MIMO (Alamouti + MRC and other modes)
                 else
                     % Transmit diversity precoding
                     if ismember(mode_0_to_11, [1,5,10]) == true
