@@ -23,8 +23,6 @@ tbs_global = ones(size(tbs_global))*plcf_length;
 
 % required plot configuration
 K = db2pow(9.0);
-use_export_fig_png = false;
-use_export_fig_eps = false;
 
 set(groot,'defaultAxesTickLabelInterpreter','latex');
 set(groot,'defaultLegendInterpreter','latex');
@@ -139,14 +137,6 @@ for cnt = 1:1:numel(mcs_index_vec)
 end
 
 savefig('results/A_BER_SNR_PCC.fig')
-if use_export_fig_png == true
-    addpath('export_fig_lib')
-    export_fig results/A_BER_SNR_PCC.png -m4 -transparent
-end
-if use_export_fig_eps == true
-    addpath('export_fig_lib')
-    export_fig results/A_BER_SNR_PCC.eps -m2.5 -transparent
-end
 
 figure()
 clf()
@@ -237,14 +227,6 @@ for cnt = 1:1:numel(mcs_index_vec)
 end
 
 savefig('results/B_BER_EBN0_PCC.fig')
-if use_export_fig_png == true
-    addpath('export_fig_lib')
-    export_fig results/B_BER_EBN0_PCC.png -m4 -transparent
-end
-if use_export_fig_eps == true
-    addpath('export_fig_lib')
-    export_fig results/B_BER_EBN0_PCC.eps -m2.5 -transparent
-end
 
 figure()
 clf()
@@ -261,39 +243,3 @@ for cnt = 1:1:numel(mcs_index_vec)
 end
 
 savefig('results/C_PER_SNR_PCC.fig')
-if use_export_fig_png == true
-    addpath('export_fig_lib')
-    export_fig results/C_PER_SNR_PCC.png -m4 -transparent
-end
-if use_export_fig_eps == true
-    addpath('export_fig_lib')
-    export_fig results/C_PER_SNR_PCC.eps -m2.5 -transparent
-end
-
-% ####################
-% ####################
-% save file with values
-% ####################
-% ####################
-
-% replace NaN with zero
-per_global(isnan(per_global)) = 0;
-
-if exist('results/PER_SNR_PCC.txt', 'file') == 2
-  delete('results/PER_SNR_PCC.txt');
-end
-clc
-diary results/PER_SNR_PCC.txt
-fprintf('%1.8f\n',snr_db_vec_global);
-disp(' ');
-disp(' ');
-fprintf('%1.8f\n',per_global);
-disp(' ');
-disp(' ');
-fprintf('%1.8f, ',snr_db_vec_global);
-disp(' ');
-disp(' ');
-fprintf('%1.8f, ',per_global);
-disp(' ');
-disp(' ');
-diary off

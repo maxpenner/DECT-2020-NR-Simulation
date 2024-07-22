@@ -32,13 +32,8 @@ max_harq_retransmissions = 0;
 snr_db_vec_global = -10 : 1.0 : 30;
 snr_db_vec_global = repmat(snr_db_vec_global,numel(mcs_index_vec),1);
 
-% Packets per mcs and snr.
-% Increase this number to get smoother curves.
+% Packets per mcs and snr. Increase this number to get smoother curves.
 n_packets_per_snr = 0.5e3;
-
-% we measure the power
-power_tx_global = zeros(numel(mcs_index_vec), numel(snr_db_vec_global(1,:)));
-power_rx_global = zeros(numel(mcs_index_vec), numel(snr_db_vec_global(1,:)));
 
 % result container for PCC
 n_bits_PCC_sent_global = zeros(numel(mcs_index_vec), numel(snr_db_vec_global(1,:)));        % BER uncoded
@@ -114,19 +109,17 @@ for mcs_index = mcs_index_vec
     % bits per symbol
     N_bps = tx.phy_4_5.mcs.N_bps;
 
-    % Local variables for a single MCS, required for parfor.
-    % Each worker can write into these arrays.
+    % Local variables for a single MCS, required for parfor. Each worker can write into these arrays.
     snr_db_vec = snr_db_vec_global(cnt,:);
     
-    power_tx_local = zeros(1, numel(snr_db_vec));
-    power_rx_local = zeros(1, numel(snr_db_vec));
-    
-    n_bits_PCC_sent_local = zeros(1, numel(snr_db_vec));        % PCC
+    % PCC
+    n_bits_PCC_sent_local = zeros(1, numel(snr_db_vec));
     n_bits_PCC_error_local = zeros(1, numel(snr_db_vec));
     n_packets_PCC_sent_local = zeros(1, numel(snr_db_vec));
     n_packets_PCC_error_local = zeros(1, numel(snr_db_vec));
-    
-    n_bits_PDC_sent_local = zeros(1, numel(snr_db_vec));        % PDC
+  
+    % PDC
+    n_bits_PDC_sent_local = zeros(1, numel(snr_db_vec));
     n_bits_PDC_error_local = zeros(1, numel(snr_db_vec));
     n_packets_PDC_sent_local = zeros(1, numel(snr_db_vec));
     n_packets_PDC_error_local = zeros(1, numel(snr_db_vec));
@@ -139,18 +132,6 @@ for mcs_index = mcs_index_vec
         % copy handle objects, changes within parfor are not permanent!
         txx = tx;
         rxx = rx;
-        
-        power_cnt = 0;
-        power_tx = 0;
-        power_rx = 0;
-                
-        n_bits_PCC_sent = 0;
-        n_bits_PCC_error = 0;
-        n_packets_PCC_error = 0;
-
-        n_bits_PDC_sent = 0;
-        n_bits_PDC_error = 0;
-        n_packets_PDC_error = 0;
 
         % adapt Wiener coefficients to channel conditions
         rxx.overwrite_wiener(1/10^(snr_db_vec(i)/10), 20, 363e-9);
@@ -185,185 +166,156 @@ for mcs_index = mcs_index_vec
         ch.r_gains_active       = true;
         ch.init_rayleigh_rician_channel();
 
-        for j=1:1:n_packets_per_snr
-
-            % give rx handles so it can debug
-            rxx.tx_handle = txx;
-            rxx.ch_handle = ch;
-            
-            % generate random PCC bits
-            if txx.mac_meta.PLCF_type == 1
-                PCC_user_bits = randi([0 1], 40, 1);
-            elseif txx.mac_meta.PLCF_type == 2
-                PCC_user_bits = randi([0 1], 80, 1);
-            end
-
-            % generate bits
-            PDC_user_bits = randi([0 1], N_TB_bits, 1);
-            
-            % otherwise matlab complains about these variables not being intialized
-            PCC_user_bits_recovered = [];
-            PDC_user_bits_recovered = [];
-            
-            % harq abort conditions
-            pcc_decoded_successfully = false;
-            pdc_decoded_successfully = false;
-
-            for z=0:1:max_harq_retransmissions
-
-                % there is a specific order for the redundany version
-                if mod(z,4) == 0
-                    txx.mac_meta.rv = 0; % initial transmission
-                    rxx.mac_meta.rv = 0; % initial transmission
-                elseif mod(z,4) == 1
-                    txx.mac_meta.rv = 2;
-                    rxx.mac_meta.rv = 2;
-                elseif mod(z,4) == 2
-                    txx.mac_meta.rv = 3;
-                    rxx.mac_meta.rv = 3;
-                elseif mod(z,4) == 3
-                    txx.mac_meta.rv = 1;
-                    rxx.mac_meta.rv = 1;
-                end
-
-                % let tx create the packet
-                samples_antenna_tx = txx.generate_packet(PCC_user_bits, PDC_user_bits);
-
-                % pass samples through channel
-                samples_antenna_rx = ch.pass_samples(samples_antenna_tx, 0);
-                
-                % make next channel impulse response independent from this one
-                ch.reset_random_rayleigh_rician();
-                
-                % measure powers
-                power_cnt = power_cnt + 1;
-                power_tx = power_tx + sum(sum(abs(samples_antenna_tx).^2))/size(samples_antenna_tx,1);
-                power_rx = power_rx + sum(sum(abs(samples_antenna_rx).^2))/size(samples_antenna_rx,1);
-
-                % Now let rx decode the frame.
-                % Rx can do so because it's mac_meta is the exact same.
-                [PCC_user_bits_recovered, PDC_user_bits_recovered] = rxx.demod_decode_packet(samples_antenna_rx);
-                
-                % measure the BER uncoded
-                
-                n_bits_PCC_sent = n_bits_PCC_sent + numel(txx.packet_data.pcc_enc_dbg.d);
-                n_bits_PCC_error = n_bits_PCC_error + sum(abs(double(txx.packet_data.pcc_enc_dbg.d) - double(rxx.packet_data.pcc_dec_dbg.d_hard)));                
-                
-                n_bits_PDC_sent = n_bits_PDC_sent + numel(txx.packet_data.pdc_enc_dbg.d);
-                n_bits_PDC_error = n_bits_PDC_error + sum(abs(double(txx.packet_data.pdc_enc_dbg.d) - double(rxx.packet_data.pdc_dec_dbg.d_hard)));
-                
-                % we might be done
-                if numel(PCC_user_bits_recovered) ~= 0
-                    pcc_decoded_successfully = true;
-                end                
-
-                % we might be done
-                if numel(PDC_user_bits_recovered) ~= 0
-                    pdc_decoded_successfully = true;
-                end
-                
-                % we continue sending retransmissions as long as not both were decoded correctly
-                if pcc_decoded_successfully == true && pdc_decoded_successfully == true
-                    break;
-                end
-            end
-
-            % delete harq buffer
-            rxx.harq_buf_40 = [];
-            rxx.harq_buf_80 = [];
-            rxx.harq_buf = [];
-            
-            % check if frame was decoded correctly, maybe there's still an error despite all the harq iterations
-            if pcc_decoded_successfully == false
-                n_packets_PCC_error = n_packets_PCC_error + 1;
-            end            
-
-            % check if frame was decoded correctly, maybe there's still an error despite all the harq iterations
-            if pdc_decoded_successfully == false
-                n_packets_PDC_error = n_packets_PDC_error + 1;
-            end
-        end
+        % run simulation over multiple packets
+        result = simulate_packets(txx, rxx, ch, n_packets_per_snr, N_TB_bits, max_harq_retransmissions);
 
         % delete channel
         delete(ch);
-
-        power_tx_local(1,i) = power_tx/power_cnt;
-        power_rx_local(1,i) = power_rx/power_cnt;
         
-        n_bits_PCC_sent_local(1,i) = n_bits_PCC_sent;
-        n_bits_PCC_error_local(1,i) = n_bits_PCC_error;
+        % each worker writes to local PCC result container
+        n_bits_PCC_sent_local(1,i) = result.n_bits_PCC_sent;
+        n_bits_PCC_error_local(1,i) = result.n_bits_PCC_error;
         n_packets_PCC_sent_local(1,i) = n_packets_per_snr;
-        n_packets_PCC_error_local(1,i) = n_packets_PCC_error;         
+        n_packets_PCC_error_local(1,i) = result.n_packets_PCC_error;         
         
-        n_bits_PDC_sent_local(1,i) = n_bits_PDC_sent;
-        n_bits_PDC_error_local(1,i) = n_bits_PDC_error;
+        % each worker writes to local PDC result container
+        n_bits_PDC_sent_local(1,i) = result.n_bits_PDC_sent;
+        n_bits_PDC_error_local(1,i) = result.n_bits_PDC_error;
         n_packets_PDC_sent_local(1,i) = n_packets_per_snr;
-        n_packets_PDC_error_local(1,i) = n_packets_PDC_error;
+        n_packets_PDC_error_local(1,i) = result.n_packets_PDC_error;
     end
     
     fprintf('Done! MCS %d of %d at %s\n', cnt, numel(mcs_index_vec), datestr(now,'HH:MM:SS'));
     
-    power_tx_global(cnt,:) = power_tx_local;
-    power_rx_global(cnt,:) = power_rx_local;
-    
+    % copy from local to global PCC results container
     n_bits_PCC_sent_global(cnt,:) = n_bits_PCC_sent_local;
     n_bits_PCC_error_global(cnt,:) = n_bits_PCC_error_local;
     n_packets_PCC_sent_global(cnt,:) = n_packets_PCC_sent_local;
     n_packets_PCC_error_global(cnt,:) = n_packets_PCC_error_local;    
 
+    % copy from local to global PDC results container
     n_bits_PDC_sent_global(cnt,:) = n_bits_PDC_sent_local;
     n_bits_PDC_error_global(cnt,:) = n_bits_PDC_error_local;
     n_packets_PDC_sent_global(cnt,:) = n_packets_PDC_sent_local;
     n_packets_PDC_error_global(cnt,:) = n_packets_PDC_error_local;
+
     bps_global(cnt) = N_bps;
     tbs_global(cnt) = N_TB_bits;
     
     cnt = cnt + 1;
 end
 
-% check if we have old results
-if isfile('results/var_only_counter.mat')
-    
-    % load copies
-    load('results/var_only_counter.mat');
-    
-    % add results of old run
-    
-    n_bits_PCC_sent_global = n_bits_PCC_sent_global + n_bits_PCC_sent_global_cpy;
-    n_bits_PCC_error_global = n_bits_PCC_error_global + n_bits_PCC_error_global_cpy;
-    n_packets_PCC_sent_global = n_packets_PCC_sent_global + n_packets_PCC_sent_global_cpy;
-    n_packets_PCC_error_global = n_packets_PCC_error_global + n_packets_PCC_error_global_cpy;        
-    
-    n_bits_PDC_sent_global = n_bits_PDC_sent_global + n_bits_PDC_sent_global_cpy;
-    n_bits_PDC_error_global = n_bits_PDC_error_global + n_bits_PDC_error_global_cpy;
-    n_packets_PDC_sent_global = n_packets_PDC_sent_global + n_packets_PDC_sent_global_cpy;
-    n_packets_PDC_error_global = n_packets_PDC_error_global + n_packets_PDC_error_global_cpy;    
-end
-
-% save results of all runs combined
-
-n_bits_PCC_sent_global_cpy = n_bits_PCC_sent_global;
-n_bits_PCC_error_global_cpy = n_bits_PCC_error_global;
-n_packets_PCC_sent_global_cpy = n_packets_PCC_sent_global;
-n_packets_PCC_error_global_cpy = n_packets_PCC_error_global;
-
-n_bits_PDC_sent_global_cpy = n_bits_PDC_sent_global;
-n_bits_PDC_error_global_cpy = n_bits_PDC_error_global;
-n_packets_PDC_sent_global_cpy = n_packets_PDC_sent_global;
-n_packets_PDC_error_global_cpy = n_packets_PDC_error_global;
-
-save('results/var_only_counter.mat',...
-        'n_bits_PCC_sent_global_cpy',...
-        'n_bits_PCC_error_global_cpy',...
-        'n_packets_PCC_sent_global_cpy',...
-        'n_packets_PCC_error_global_cpy',...
-        'n_bits_PDC_sent_global_cpy',...
-        'n_bits_PDC_error_global_cpy',...
-        'n_packets_PDC_sent_global_cpy',...
-        'n_packets_PDC_error_global_cpy');
-
 % save all variables
 save('results/var_all.mat');
 
 %profile viewer
 %profile off
+
+function [result] = simulate_packets(txx, rxx, ch, n_packets_per_snr, N_TB_bits, max_harq_retransmissions)
+
+    n_bits_PCC_sent = 0;
+    n_bits_PCC_error = 0;
+    n_packets_PCC_error = 0;
+
+    n_bits_PDC_sent = 0;
+    n_bits_PDC_error = 0;
+    n_packets_PDC_error = 0;
+
+    % give rx handles so it can debug
+    rxx.tx_handle = txx;
+    rxx.ch_handle = ch;
+
+    for j=1:1:n_packets_per_snr
+        
+        % generate random PCC bits
+        if txx.mac_meta.PLCF_type == 1
+            PCC_user_bits = randi([0 1], 40, 1);
+        elseif txx.mac_meta.PLCF_type == 2
+            PCC_user_bits = randi([0 1], 80, 1);
+        end
+
+        % generate bits
+        PDC_user_bits = randi([0 1], N_TB_bits, 1);
+        
+        % harq abort conditions
+        pcc_decoded_successfully = false;
+        pdc_decoded_successfully = false;
+
+        for z=0:1:max_harq_retransmissions
+
+            % there is a specific order for the redundany version
+            if mod(z,4) == 0
+                txx.mac_meta.rv = 0; % initial transmission
+                rxx.mac_meta.rv = 0; % initial transmission
+            elseif mod(z,4) == 1
+                txx.mac_meta.rv = 2;
+                rxx.mac_meta.rv = 2;
+            elseif mod(z,4) == 2
+                txx.mac_meta.rv = 3;
+                rxx.mac_meta.rv = 3;
+            elseif mod(z,4) == 3
+                txx.mac_meta.rv = 1;
+                rxx.mac_meta.rv = 1;
+            end
+
+            % let tx create the packet
+            samples_antenna_tx = txx.generate_packet(PCC_user_bits, PDC_user_bits);
+
+            % pass samples through channel
+            samples_antenna_rx = ch.pass_samples(samples_antenna_tx, 0);
+            
+            % make next channel impulse response independent from this one
+            ch.reset_random_rayleigh_rician();
+
+            % Now let rx decode the frame.
+            % Rx can do so because it's mac_meta is the exact same.
+            [PCC_user_bits_recovered, PDC_user_bits_recovered] = rxx.demod_decode_packet(samples_antenna_rx);
+            
+            % measure the BER uncoded
+            
+            n_bits_PCC_sent = n_bits_PCC_sent + numel(txx.packet_data.pcc_enc_dbg.d);
+            n_bits_PCC_error = n_bits_PCC_error + sum(abs(double(txx.packet_data.pcc_enc_dbg.d) - double(rxx.packet_data.pcc_dec_dbg.d_hard)));                
+            
+            n_bits_PDC_sent = n_bits_PDC_sent + numel(txx.packet_data.pdc_enc_dbg.d);
+            n_bits_PDC_error = n_bits_PDC_error + sum(abs(double(txx.packet_data.pdc_enc_dbg.d) - double(rxx.packet_data.pdc_dec_dbg.d_hard)));
+            
+            % we might be done
+            if numel(PCC_user_bits_recovered) ~= 0
+                pcc_decoded_successfully = true;
+            end                
+
+            % we might be done
+            if numel(PDC_user_bits_recovered) ~= 0
+                pdc_decoded_successfully = true;
+            end
+            
+            % we continue sending retransmissions as long as not both were decoded correctly
+            if pcc_decoded_successfully == true && pdc_decoded_successfully == true
+                break;
+            end
+        end
+
+        % delete harq buffer
+        rxx.harq_buf_40 = [];
+        rxx.harq_buf_80 = [];
+        rxx.harq_buf = [];
+        
+        % check if frame was decoded correctly, maybe there's still an error despite all the harq iterations
+        if pcc_decoded_successfully == false
+            n_packets_PCC_error = n_packets_PCC_error + 1;
+        end            
+
+        % check if frame was decoded correctly, maybe there's still an error despite all the harq iterations
+        if pdc_decoded_successfully == false
+            n_packets_PDC_error = n_packets_PDC_error + 1;
+        end
+    end
+
+    result.n_bits_PCC_sent = n_bits_PCC_sent;
+    result.n_bits_PCC_error = n_bits_PCC_error;
+    result.n_packets_PCC_error = n_packets_PCC_error;
+
+    result.n_bits_PDC_sent = n_bits_PDC_sent;
+    result.n_bits_PDC_error = n_bits_PDC_error;
+    result.n_packets_PDC_error = n_packets_PDC_error;
+end

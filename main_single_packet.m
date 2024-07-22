@@ -70,7 +70,7 @@ mac_meta_rx.N_RX = 2;
 
 % Synchronization based on STF (typically link-layer-simulations do not include synchronization)
 %
-% If synchronization is turned on (i.e. mac_meta_rx.synchronization.stf.active = true) the receiver class dect_rx will try
+% If synchronization is turned on (i.e. mac_meta_rx.synchronization.stf.active = true) the receiver class dect_rx will try to
 % synchronize a packet before decoding it. For that, the dect_rx member function demod_decode_packet(samples_antenna_rx) must
 % be called with samples_antenna_rx having more samples than samples_antenna_tx.
 %
@@ -159,7 +159,7 @@ if mac_meta_tx.oversampling > 1
     
     samples_antenna_rx = filter(lowpassfilter, samples_antenna_rx);
     
-    % compensate for deterministic filter delay prior to synchronization
+    % compensate deterministic filter delay prior to synchronization
     lowpassfilter_delay = (numel(lowpassfilter.Coefficients)-1)/2;
     samples_antenna_rx(1:end-lowpassfilter_delay) = samples_antenna_rx(lowpassfilter_delay+1:end);
 end

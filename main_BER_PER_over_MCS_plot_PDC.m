@@ -10,8 +10,6 @@ per_global = n_packets_PDC_error_global./n_packets_PDC_sent_global;
 
 % required plot configuration
 K = db2pow(9.0);
-use_export_fig_png = false;
-use_export_fig_eps = false;
 
 set(groot,'defaultAxesTickLabelInterpreter','latex');
 set(groot,'defaultLegendInterpreter','latex');
@@ -126,14 +124,6 @@ for cnt = 1:1:numel(mcs_index_vec)
 end
 
 savefig('results/D_BER_SNR_PDC.fig')
-if use_export_fig_png == true
-    addpath('export_fig_lib')
-    export_fig results/D_BER_SNR_PDC.png -m4 -transparent
-end
-if use_export_fig_eps == true
-    addpath('export_fig_lib')
-    export_fig results/D_BER_SNR_PDC.eps -m2.5 -transparent
-end
 
 figure()
 clf()
@@ -224,14 +214,6 @@ for cnt = 1:1:numel(mcs_index_vec)
 end
 
 savefig('results/E_BER_EBN0_PDC.fig')
-if use_export_fig_png == true
-    addpath('export_fig_lib')
-    export_fig results/E_BER_EBN0_PDC.png -m4 -transparent
-end
-if use_export_fig_eps == true
-    addpath('export_fig_lib')
-    export_fig results/E_BER_EBN0_PDC.eps -m2.5 -transparent
-end
 
 figure()
 clf()
@@ -248,101 +230,3 @@ for cnt = 1:1:numel(mcs_index_vec)
 end
 
 savefig('results/F_PER_SNR_PDC.fig')
-if use_export_fig_png == true
-    addpath('export_fig_lib')
-    export_fig results/F_PER_SNR_PDC.png -m4 -transparent
-end
-if use_export_fig_eps == true
-    addpath('export_fig_lib')
-    export_fig results/F_PER_SNR_PDC.eps -m2.5 -transparent
-end
-
-% ####################
-% ####################
-% save file with values
-% ####################
-% ####################
-
-% replace NaN with zero
-per_global(isnan(per_global)) = 0;
-
-if exist('results/PER_SNR_PDC.txt', 'file') == 2
-  delete('results/PER_SNR_PDC.txt');
-end
-clc
-diary results/PER_SNR_PDC.txt
-fprintf('%1.8f\n',snr_db_vec_global);
-disp(' ');
-disp(' ');
-fprintf('%1.8f\n',per_global);
-disp(' ');
-disp(' ');
-fprintf('%1.8f, ',snr_db_vec_global);
-disp(' ');
-disp(' ');
-fprintf('%1.8f, ',per_global);
-disp(' ');
-disp(' ');
-diary off
-
-%% STF synchronization plots
-if exist('STO_hist_coarse_global','var') == true
-
-    % how many packets did we create per SNR?
-    n_packets_per_SNR_coarse = sum(STO_hist_coarse_global,1);
-    n_packets_per_SNR_fine = sum(STO_hist_fine_global,1);
-
-    % sanity check
-    if sum(n_packets_per_SNR_coarse - n_packets_per_SNR_fine) > 0
-        error('Number of packets no equal.');
-    end
-
-    % how many packets are outside the evaluation range (outer edges)?
-    n_packets_per_missed_coarse = STO_hist_coarse_global(1,:) + STO_hist_coarse_global(end,:);
-    n_packets_per_missed_fine = STO_hist_fine_global(1,:) + STO_hist_fine_global(end,:);
-
-    % we need a percentage of missed packets
-    perc_packets_missed_coarse = n_packets_per_missed_coarse./n_packets_per_SNR_coarse;
-    perc_packets_missed_fine = n_packets_per_missed_fine./n_packets_per_SNR_fine;
-
-    % size of plot
-    [n_bins, n_SNR_steps] = size(STO_hist_coarse_global);
-
-    figure();
-    clf()
-
-    for i=1:1:n_SNR_steps
-
-        row = (i-1)*2+1;
-
-        % COARSE
-
-        subplot(n_SNR_steps, 2, row);
-        histogram('BinEdges',edges,'BinCounts',STO_hist_coarse_global(:,i), 'Normalization','pdf');
-
-        xlim([edges(2) edges(end-1)]);
-        ylim([0 1.1]);
-
-        xlabel('STO Error in oversampled Samples')
-
-        title_string = "SNR=" + num2str(snr_db_vec_global(i)) + "dB   Coarse";
-        title(title_string);
-
-        text(0,0.8,"Missed=" + num2str(perc_packets_missed_coarse(i)));
-
-        % FINE
-
-        subplot(n_SNR_steps, 2, row+1);
-        histogram('BinEdges',edges,'BinCounts',STO_hist_fine_global(:,i), 'Normalization','pdf');
-
-        xlim([edges(2) edges(end-1)]);
-        ylim([0 1.1]);
-
-        xlabel('STO Error in oversampled Samples')
-
-        title_string = "SNR=" + num2str(snr_db_vec_global(i)) + "dB   Fine";
-        title(title_string);
-
-        text(0,0.8,"Missed=" + num2str(perc_packets_missed_fine(i)));
-    end
-end
