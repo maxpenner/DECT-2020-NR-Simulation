@@ -99,16 +99,6 @@ for mcs_index = mcs_index_vec
     % create rx
     rx = dect_rx(verbose, mac_meta_rx);
 
-    % how many antennas do we have?
-    N_TX = tx.phy_4_5.tm_mode.N_TX;
-    N_RX = rx.mac_meta.N_RX;
-
-    % how many bits does tx need?
-    N_TB_bits = tx.phy_4_5.N_TB_bits;
-    
-    % bits per symbol
-    N_bps = tx.phy_4_5.mcs.N_bps;
-
     % Local variables for a single MCS, required for parfor. Each worker can write into these arrays.
     snr_db_vec = snr_db_vec_global(cnt,:);
     
@@ -133,44 +123,8 @@ for mcs_index = mcs_index_vec
         txx = tx;
         rxx = rx;
 
-        % adapt Wiener coefficients to channel conditions
-        rxx.overwrite_wiener(1/10^(snr_db_vec(i)/10), 20, 363e-9);
-
-        % create channel
-        ch                      = lib_rf_channel.rf_channel();
-        ch.verbose              = verbose;
-        ch.verbose_cp           = txx.phy_4_5.numerology.N_b_CP*txx.mac_meta.oversampling;
-        ch.type                 = 'rician';
-        ch.amp                  = 1.0;
-        ch.noise                = true;
-        ch.snr_db             	= snr_db_vec(i);
-        ch.spectrum_occupied    = txx.phy_4_5.n_spectrum_occupied/txx.mac_meta.oversampling;
-        ch.N_TX                	= N_TX;
-        ch.N_RX               	= N_RX;
-        ch.awgn_random_source   = 'global';
-        ch.awgn_randomstream 	= RandStream('mt19937ar','Seed', randi(1e9,[1 1]));
-        ch.a_sto                = 0;
-        ch.a_cfo               	= 0;
-        ch.a_err_phase         	= 0;
-        ch.r_random_source      = 'global';
-        ch.r_seed    	        = randi(1e9,[1 1]);
-        ch.r_sto                = 0;
-        ch.r_cfo                = 0;
-        ch.r_err_phase          = 0;
-        ch.r_samp_rate        	= txx.phy_4_5.numerology.B_u_b_DFT*txx.mac_meta.oversampling;
-        ch.r_max_doppler     	= 1.946;                            % 1.946 19.458
-        ch.r_type   	        = 'TDL-v';
-        ch.r_DS_desired         = 10^(-7.03 + 0.00*randn(1,1));
-        ch.r_K                  = db2pow(9.0 + 0.00*randn(1,1));    %93e-9;
-        ch.r_interpolation      = true;
-        ch.r_gains_active       = true;
-        ch.init_rayleigh_rician_channel();
-
         % run simulation over multiple packets
-        result = simulate_packets(txx, rxx, ch, n_packets_per_snr, N_TB_bits, max_harq_retransmissions);
-
-        % delete channel
-        delete(ch);
+        result = simulate_packets(txx, rxx, snr_db_vec(i), n_packets_per_snr, max_harq_retransmissions);
         
         % each worker writes to local PCC result container
         n_bits_PCC_sent_local(1,i) = result.n_bits_PCC_sent;
@@ -199,8 +153,8 @@ for mcs_index = mcs_index_vec
     n_packets_PDC_sent_global(cnt,:) = n_packets_PDC_sent_local;
     n_packets_PDC_error_global(cnt,:) = n_packets_PDC_error_local;
 
-    bps_global(cnt) = N_bps;
-    tbs_global(cnt) = N_TB_bits;
+    bps_global(cnt) = tx.phy_4_5.mcs.N_bps;
+    tbs_global(cnt) = tx.phy_4_5.N_TB_bits;
     
     cnt = cnt + 1;
 end
@@ -211,7 +165,7 @@ save('results/var_all.mat');
 %profile viewer
 %profile off
 
-function [result] = simulate_packets(txx, rxx, ch, n_packets_per_snr, N_TB_bits, max_harq_retransmissions)
+function [result] = simulate_packets(txx, rxx, snr_dB, n_packets_per_snr, max_harq_retransmissions)
 
     n_bits_PCC_sent = 0;
     n_bits_PCC_error = 0;
@@ -221,9 +175,49 @@ function [result] = simulate_packets(txx, rxx, ch, n_packets_per_snr, N_TB_bits,
     n_bits_PDC_error = 0;
     n_packets_PDC_error = 0;
 
+    % how many antennas do we have?
+    N_TX = txx.phy_4_5.tm_mode.N_TX;
+    N_RX = rxx.mac_meta.N_RX;
+
+    % create channel
+    ch                      = lib_rf_channel.rf_channel();
+    ch.verbose              = 0;
+    ch.verbose_cp           = txx.phy_4_5.numerology.N_b_CP*txx.mac_meta.oversampling;
+    ch.type                 = 'rician';
+    ch.amp                  = 1.0;
+    ch.noise                = true;
+    ch.snr_db             	= snr_dB;
+    ch.spectrum_occupied    = txx.phy_4_5.n_spectrum_occupied/txx.mac_meta.oversampling;
+    ch.N_TX                	= N_TX;
+    ch.N_RX               	= N_RX;
+    ch.awgn_random_source   = 'global';
+    ch.awgn_randomstream 	= RandStream('mt19937ar','Seed', randi(1e9,[1 1]));
+    ch.a_sto                = 0;
+    ch.a_cfo               	= 0;
+    ch.a_err_phase         	= 0;
+    ch.r_random_source      = 'global';
+    ch.r_seed    	        = randi(1e9,[1 1]);
+    ch.r_sto                = 0;
+    ch.r_cfo                = 0;
+    ch.r_err_phase          = 0;
+    ch.r_samp_rate        	= txx.phy_4_5.numerology.B_u_b_DFT*txx.mac_meta.oversampling;
+    ch.r_max_doppler     	= 1.946;                            % 1.946 19.458
+    ch.r_type   	        = 'TDL-v';
+    ch.r_DS_desired         = 10^(-7.03 + 0.00*randn(1,1));
+    ch.r_K                  = db2pow(9.0 + 0.00*randn(1,1));    %93e-9;
+    ch.r_interpolation      = true;
+    ch.r_gains_active       = true;
+    ch.init_rayleigh_rician_channel();
+
+    % adapt Wiener coefficients to channel conditions
+    rxx.overwrite_wiener(1/10^(snr_dB/10), 20, 363e-9);
+
     % give rx handles so it can debug
     rxx.tx_handle = txx;
     rxx.ch_handle = ch;
+
+    % how many bits does tx need?
+    N_TB_bits = txx.phy_4_5.N_TB_bits;
 
     for j=1:1:n_packets_per_snr
         
@@ -310,6 +304,9 @@ function [result] = simulate_packets(txx, rxx, ch, n_packets_per_snr, N_TB_bits,
             n_packets_PDC_error = n_packets_PDC_error + 1;
         end
     end
+
+    % delete channel
+    delete(ch);
 
     result.n_bits_PCC_sent = n_bits_PCC_sent;
     result.n_bits_PCC_error = n_bits_PCC_error;
