@@ -62,7 +62,7 @@ samples_antenna_tx = tx.generate_packet(PCC_user_bits, PDC_user_bits);
 
 %% create rx
 
-% assume the receiver has full knowledge of meta data at the transmitter (usually extracted from STF+PCC)
+% assume the receiver has full knowledge of meta data at the transmitter (usually extracted from STF+PCC or blindly tested)
 mac_meta_rx = mac_meta_tx;
 
 % number of antennas at the receiver
@@ -75,7 +75,7 @@ mac_meta_rx.N_RX = 2;
 % be called with samples_antenna_rx having more samples than samples_antenna_tx.
 %
 % If synchronization is turned off (i.e. mac_meta_rx.synchronization.stf.active = false) the dect_rx member
-% function demod_decode_packet(samples_antenna_rx) must be called with samples_antenna_tx having the exact same number
+% function demod_decode_packet(samples_antenna_rx) must be called with samples_antenna_rx having the exact same number
 % of samples as samples_antenna_tx, but not necessarily the same number of antennas (depends on MIMO mode).
 %
 mac_meta_rx.synchronization.stf.active = true;
@@ -96,45 +96,10 @@ mac_meta_rx.synchronization.drs.cfo_config.active_residual = true;
 % create actual receiver
 rx = dect_rx(verbose, mac_meta_rx);
 
-%% create channel, can be replaced with a custom channel type
+%% create channel, can be replaced with a custom channel
 
-% number of antennas at TX and RX
-N_TX = tx.phy_4_5.tm_mode.N_TX;
-N_RX = rx.mac_meta.N_RX;
-
-% RF channel parameters (see +lib_rf_channel/rf_channel.m) valid for all channel types.
-ch                      = lib_rf_channel.rf_channel();
-ch.verbose              = verbose;
-ch.verbose_cp           = tx.phy_4_5.numerology.N_b_CP*tx.mac_meta.oversampling;
-ch.type                 = 'rayleigh';
-ch.amp                  = 1.0;
-ch.noise                = true;
-ch.snr_db               = 30;
-ch.spectrum_occupied    = tx.phy_4_5.n_spectrum_occupied/tx.mac_meta.oversampling;
-ch.N_TX                 = N_TX;
-ch.N_RX                 = N_RX;
-ch.awgn_random_source   = 'global';
-ch.awgn_randomstream    = RandStream('mt19937ar','Seed', randi(1e9,[1 1]));
-
-% Parameters with d_ only used if ch.type = 'deterministic'. It is called deterministic because STO, CFO and error phase have fixed, known values.
-ch.d_sto                = 123 + 2*size(samples_antenna_tx, 1);
-ch.d_cfo                = 1.7*(1/(tx.phy_4_5.numerology.N_b_DFT*tx.mac_meta.oversampling));
-ch.d_err_phase          = deg2rad(123);
-
-% Parameters with r_ only used if ch.type = 'rayleigh' or 'rician'.
-ch.r_random_source      = 'global';
-ch.r_seed    	        = randi(1e9,[1 1]);
-ch.r_sto                = ch.d_sto;
-ch.r_cfo                = ch.d_cfo;
-ch.r_err_phase          = ch.d_err_phase;
-ch.r_samp_rate          = tx.phy_4_5.numerology.B_u_b_DFT*tx.mac_meta.oversampling;
-ch.r_max_doppler        = 1.946;                            % 1.946 19.458
-ch.r_type   	        = 'TDL-iii';
-ch.r_DS_desired         = 10^(-7.03 + 0.00*randn(1,1));
-ch.r_K                  = db2pow(9.0 + 0.00*randn(1,1));    %93e-9;
-ch.r_interpolation      = true;
-ch.r_gains_active       = true;
-ch.init_rayleigh_rician_channel();
+% type can be awgn, rayleigh or rician
+ch = lib_rf_channel.rf_channel_example_factory('rayleigh', verbose, tx, rx, size(samples_antenna_tx, 1));
 
 %% give rx handles so it can debug, e.g. perfect channel knowledge
 rx.tx_handle = tx;
