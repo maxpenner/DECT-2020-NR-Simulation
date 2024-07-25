@@ -140,11 +140,11 @@ classdef dect_tx < handle
 
             %% save packet data for debugging
             obj.packet_data.x_PCC = x_PCC;
-          	obj.packet_data.x_PDC = x_PDC;
+            obj.packet_data.x_PDC = x_PDC;
             obj.packet_data.pcc_enc_dbg = pcc_enc_dbg;
-         	obj.packet_data.pdc_enc_dbg = pdc_enc_dbg;
+            obj.packet_data.pdc_enc_dbg = pdc_enc_dbg;
             obj.packet_data.y_PCC_ts = y_PCC_ts;
-          	obj.packet_data.y_PDC_ts = y_PDC_ts;
+            obj.packet_data.y_PDC_ts = y_PDC_ts;
             obj.packet_data.antenna_streams_mapped = antenna_streams_mapped;
 
             %% sanity checks

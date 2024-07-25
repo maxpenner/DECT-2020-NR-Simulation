@@ -29,7 +29,7 @@ function [ch] = rf_channel_example_factory(type, verbose, tx, rx, n_samples_ante
     
         % Parameters with r_ only used if ch.type = 'rayleigh' or 'rician'.
         ch.r_random_source  = 'global';
-        ch.r_seed    	    = randi(1e9,[1 1]);
+        ch.r_seed           = randi(1e9,[1 1]);
         ch.r_sto            = 123 + 2*n_samples_antenna_tx;
         ch.r_cfo            = 1.7*(1/(tx.phy_4_5.numerology.N_b_DFT*tx.mac_meta.oversampling));
         ch.r_err_phase      = deg2rad(123);

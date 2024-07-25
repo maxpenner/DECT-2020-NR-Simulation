@@ -5,7 +5,7 @@ function antenna_streams_mapped_rev_cfo = sync_CFO_residual(    antenna_streams_
                                                                 N_eff_TX,...
                                                                 cfo_config)
    
-	% we need the dimensions of the packet
+    % we need the dimensions of the packet
     [N_b_DFT, N_PACKET_symb] = size(cell2mat(antenna_streams_mapped_rev(1)));
 
     %% STF preparation

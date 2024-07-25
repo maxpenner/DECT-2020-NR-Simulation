@@ -56,7 +56,7 @@ function [physical_resource_mapping_PCC_cell] = PCC(numerology, k_b_OCC, N_TS, N
     %   second cell:    subcarrier indices for one ofdm symbol
     %   third cell:     subcarrier indices for one ofdm symbol
     %   ...
-    %   last cell:   	indices of all aforementioned ofdm symbols (see ofdm_symbol_indices)
+    %   last cell:      indices of all aforementioned ofdm symbols (see ofdm_symbol_indices)
     %    
     physical_resource_mapping_PCC_cell = cell(0);
     ofdm_symbol_indices = [];

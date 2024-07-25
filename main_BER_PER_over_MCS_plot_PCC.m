@@ -75,7 +75,7 @@ for cnt = 1:1:numel(mcs_index_vec)
     else
         ber_rayleigh = berawgn(EbN0_dB_vec,'qam',M,1);
     end
- 	str = append('MCS=',num2str(mcs_index_vec(cnt)),', TBS=',num2str(tbs_global(cnt)), ', AWGN');
+    str = append('MCS=',num2str(mcs_index_vec(cnt)),', TBS=',num2str(tbs_global(cnt)), ', AWGN');
     semilogy(snr_db_vec_global(cnt,:), ber_rayleigh,'-','DisplayName',str, 'Color', colors(cnt,:));
     hold on
 
@@ -165,7 +165,7 @@ for cnt = 1:1:numel(mcs_index_vec)
     else
         ber_rayleigh = berawgn(EbN0_dB_vec,'qam',M,1);
     end
- 	str = append('MCS=',num2str(mcs_index_vec(cnt)),', TBS=',num2str(tbs_global(cnt)), ', AWGN');
+    str = append('MCS=',num2str(mcs_index_vec(cnt)),', TBS=',num2str(tbs_global(cnt)), ', AWGN');
     semilogy(EbN0_dB_vec, ber_rayleigh,'-','DisplayName',str, 'Color', colors(cnt,:));
     hold on
 

@@ -9,10 +9,10 @@ function [x_PDC, pdc_enc_dbg] = PDC_encoding(PDC_user_bits,...
     a = PDC_user_bits;
 
     %%
-	b = lteCRCEncode(a,'24A');
+    b = lteCRCEncode(a,'24A');
 
     %%
-  	if Z == 2048
+    if Z == 2048
         c = lib_6_generic_procedures.Code_block_segmentation_Z_2048(b);
     elseif Z == 6144
         c = lteCodeBlockSegment(b);

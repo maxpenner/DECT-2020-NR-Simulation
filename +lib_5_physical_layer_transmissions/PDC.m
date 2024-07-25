@@ -94,7 +94,7 @@ function [physical_resource_mapping_PDC_cell, N_PDC_re] = PDC(u, numerology, k_b
     %   second cell:    subcarrier indices for one ofdm symbol
     %   third cell:     subcarrier indices for one ofdm symbol
     %   ...
-    %   last cell:   	indices of all aforementioned ofdm symbols (see ofdm_symbol_indices)
+    %   last cell:      indices of all aforementioned ofdm symbols (see ofdm_symbol_indices)
     %    
     physical_resource_mapping_PDC_cell = cell(0);
     ofdm_symbol_indices = [];

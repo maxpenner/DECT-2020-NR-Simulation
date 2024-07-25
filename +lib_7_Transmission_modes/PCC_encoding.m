@@ -51,7 +51,7 @@ function [x_PCC, pcc_enc_dbg] = PCC_encoding(PCC_user_bits, CL, precoding_identi
     e = lteRateMatchTurbo(d_turbo, 98*2, rv, chs);
     
     %% scrambling
-	[seq,~] = ltePRBS(hex2dec('0x44454354'), 98*2);     % 0x44454354 = (1145389908)_10
+    [seq,~] = ltePRBS(hex2dec('0x44454354'), 98*2);     % 0x44454354 = (1145389908)_10
     d = mod(e + int8(seq), 2);
 
     %% symbol mapping

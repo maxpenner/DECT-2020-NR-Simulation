@@ -51,7 +51,7 @@ function [PCC_user_bits] = Physical_Header_Field(plcf_meta)
     % only Table 6.2.1-2 and Table 6.2.1-2a
     elseif plcf.type == 2
 
-        plcf.DF_MCS                     = de2bi(plcf_meta.DF_MCS,                    4,'left-msb');	% Table 6.2.2-3
+        plcf.DF_MCS                     = de2bi(plcf_meta.DF_MCS,                    4,'left-msb');     % Table 6.2.2-3
         plcf.Receiver_Identity          = de2bi(plcf_meta.Receiver_Identity,        16,'left-msb');
         plcf.Number_of_Spatial_Streams  = de2bi(plcf_meta.Number_of_Spatial_Streams, 2,'left-msb');
 

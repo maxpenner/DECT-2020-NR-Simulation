@@ -5,7 +5,7 @@ function [] = clear_directory(directory_path)
 
     % delete all files
     for i=1:1:n_files
-    	full_filepath = fullfile(filenames(i).folder,filenames(i).name);
+        full_filepath = fullfile(filenames(i).folder,filenames(i).name);
         delete(full_filepath);
     end
 end
