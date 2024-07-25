@@ -290,7 +290,8 @@ classdef dect_rx < handle
                 fprintf('Measured f domain SINR: %f dB\n', sinr);
 
                 if verbose_ > 1
-                    scatterplot(x_PDC_rev);
+                    lib_dbg.plot_chestim(ch_estim, obj.phy_4_5.numerology.n_guards_bottom, obj.phy_4_5.numerology.n_guards_top);
+                    scatterplot(x_PDC_rev);                    
                 end
             end
         end
