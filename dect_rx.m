@@ -103,6 +103,7 @@ classdef dect_rx < handle
 
             n_packet_samples    = obj.phy_4_5.n_packet_samples;
 
+            b                   = obj.mac_meta.b;
             u                   = obj.mac_meta.u;
             Z                   = obj.mac_meta.Z;
             network_id          = obj.mac_meta.network_id;
@@ -143,6 +144,9 @@ classdef dect_rx < handle
                 % assume the input samples are synchronized and have the correct length
                 samples_antenna_rx_sto_cfo = samples_antenna_rx;
             end
+
+            %% revert cover sequence by reapplying it
+            samples_antenna_rx_sto_cfo = lib_6_generic_procedures.STF_signal_cover_sequence(samples_antenna_rx_sto_cfo, u, b*oversampling);
 
             %% OFDM demodulation a.k.a FFT
             % Switch back to frequency domain.
