@@ -44,7 +44,7 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
         % the step must be small enough to find every STF at every SNR
         for k = 1 : sto_config.threshold.step : numel(metric)
 
-            % determine the metric at this samples index
+            % determine the metric at this sample index
             metric(k) = lib_rx.sync_STO_coarse_metric(samples_antenna_single(k : k + n_samples_STF_os - 1), M, L, sto_config.minimum_power_threshold);
 
             % the threshold must be small enough to find every STF at every SNR
@@ -68,7 +68,7 @@ function [samples_antenna_sto_cfo, STO_CFO_report] = sync_STF(  verbose,...
 
     % In a real receiver, we will start the rest of the synchronization algorithm once we hit a preamble at ANY antenna.
     % This corresponds in our case to finding the smallest index across all antennas.
-    % If we didn't find any preamble at all, assume index 1, which will lead to a incorrect decoding if STO is sufficiently large.
+    % If we didn't find any preamble at all, assume index 1, which will lead to a incorrect decoding if the STO is sufficiently large.
     if isempty(coarse_threshold_crossing_idx) == true
         coarse_threshold_crossing_idx = 1;
     else

@@ -1,7 +1,7 @@
 clear all;
 close all;
 
-% This scripts plots the results generated with main_BER_PER_over_MCS.m, main_BER_PER_over_MCS_convergence.m or main_BER_PER_over_MCS_convergence_full.m.
+% This scripts plots the results generated with main_BER_PER_over_MCS.m.
 
 load('results/var_all.mat');
 

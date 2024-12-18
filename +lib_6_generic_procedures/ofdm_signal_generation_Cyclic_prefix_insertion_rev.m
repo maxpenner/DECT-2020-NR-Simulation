@@ -40,8 +40,16 @@ function [antenna_streams_mapped_rev, antenna_streams_mapped_rev_with_os_carrier
             N_OCC_0 = N_OCC_l/4;
             samples_antenna_sto_cfo(1:STF_in_samples,:) = sqrt(N_OCC_0)/N_b_DFT*samples_antenna_sto_cfo(1:STF_in_samples,:);
             
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
             % we boosted the stf, remove this boost
-            samples_antenna_sto_cfo(1:STF_in_samples,:) = 1/sqrt(N_eff_TX)*samples_antenna_sto_cfo(1:STF_in_samples,:);
+            %samples_antenna_sto_cfo(1:STF_in_samples,:) = 1/sqrt(N_eff_TX)*samples_antenna_sto_cfo(1:STF_in_samples,:);
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
             
             % we need to add some zeros to make it a multiple of N_b_DFT
             GI_length_in_samples = N_b_CP + N_b_DFT;
@@ -77,8 +85,16 @@ function [antenna_streams_mapped_rev, antenna_streams_mapped_rev_with_os_carrier
             N_OCC_0 = N_OCC_l/4;
             samples_antenna_sto_cfo(1:STF_in_samples,:) = sqrt(N_OCC_0)/N_b_DFT*samples_antenna_sto_cfo(1:STF_in_samples,:);
             
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
             % we boosted the stf, remove this boost
-            samples_antenna_sto_cfo(1:STF_in_samples,:) = 1/sqrt(N_eff_TX)*samples_antenna_sto_cfo(1:STF_in_samples,:);            
+            %samples_antenna_sto_cfo(1:STF_in_samples,:) = 1/sqrt(N_eff_TX)*samples_antenna_sto_cfo(1:STF_in_samples,:);
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
+            % !!!!!!!!!!! NOT STANDARD COMPLIANT !!!!!!!!!!!
             
             % ofdm demodulation, switch back to frequency domain
             demod = comm.OFDMDemodulator ('FFTLength',N_b_DFT,...
