@@ -80,21 +80,21 @@ for mcs_index = mcs_index_vec
     mac_meta_rx = mac_meta_tx;
     mac_meta_rx.N_RX = 1;
 
-    % synchronization based on STF
-    mac_meta_rx.synchronization.stf.active = false;
-    if mac_meta_rx.synchronization.stf.active == true
+    % synchronization before the FFT (i.e. in time domain) based on the STF
+    mac_meta_rx.synchronization.pre_FFT.active = false;
+    if mac_meta_rx.synchronization.pre_FFT.active == true
     
-        % STO (detection, coarse peak search, fine peak search)
-        mac_meta_rx.synchronization.stf.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
+        % symbol time offset (STO), i.e. detection, coarse peak search, fine peak search
+        mac_meta_rx.synchronization.pre_FFT.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
         
-        % CFO (fractional, integer)
-        mac_meta_rx.synchronization.stf.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
-        mac_meta_rx.synchronization.stf.cfo_config.active_fractional = false;
-        mac_meta_rx.synchronization.stf.cfo_config.active_integer = false;
+        % carrier frequency offset (CFO), i.e. fractional and integer CFO
+        mac_meta_rx.synchronization.pre_FFT.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
+        mac_meta_rx.synchronization.pre_FFT.cfo_config.active_fractional = false;
+        mac_meta_rx.synchronization.pre_FFT.cfo_config.active_integer = false;
     end
     
-    % synchronization based on DRS (residual CFO)
-    mac_meta_rx.synchronization.drs.cfo_config.active_residual = false;
+    % synchronization in frequency domain based on STF and/or DRS
+    mac_meta_rx.synchronization.post_FFT.cfo_residual = false;
 
     % create rx
     rx = dect_rx(verbose, mac_meta_rx);

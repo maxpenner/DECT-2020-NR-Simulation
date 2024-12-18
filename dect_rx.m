@@ -40,7 +40,7 @@ classdef dect_rx < handle
             obj.ch_handle = [];
 
             % we only load STF templates if they are needed
-            if mac_meta_arg.synchronization.stf.active == true
+            if mac_meta_arg.synchronization.pre_FFT.active == true
                 obj.STF_templates = lib_rx.sync_STF_template(mac_meta_arg);
             end
 
@@ -124,7 +124,7 @@ classdef dect_rx < handle
             physical_resource_mapping_DRS_cell = obj.phy_4_5.physical_resource_mapping_DRS_cell;
 
             %% sync of STO + CFO and extraction of N_eff_TX into STO_CFO_report
-            if synchronization.stf.active == true
+            if synchronization.pre_FFT.active == true
 
                 % The number of samples received is larger than the number of samples in a packet.
                 % In this function, we try to synchronize the packet and extract the exact number of samples in the packet, which we assume to be known.
@@ -136,13 +136,16 @@ classdef dect_rx < handle
                                                                                 STF_templates_,...
                                                                                 n_packet_samples,...
                                                                                 oversampling,...
-                                                                                synchronization.stf.sto_config,...
-                                                                                synchronization.stf.cfo_config);
+                                                                                synchronization.pre_FFT.sto_config,...
+                                                                                synchronization.pre_FFT.cfo_config);
 
                 obj.packet_data.STO_CFO_report = STO_CFO_report;
             else
                 % assume the input samples are synchronized and have the correct length
                 samples_antenna_rx_sto_cfo = samples_antenna_rx;
+
+                % add empty report
+                obj.packet_data.STO_CFO_report = [];
             end
 
             %% revert cover sequence by reapplying it
@@ -161,7 +164,16 @@ classdef dect_rx < handle
                                                                                                                             u,...
                                                                                                                             N_b_CP,...
                                                                                                                             oversampling);
-                                                                                                                    
+
+            %% residual CFO correction post FFT based on averaging DRS symbols
+            if synchronization.post_FFT.cfo_residual == true
+                antenna_streams_mapped_rev = lib_rx.sync_CFO_residual(  antenna_streams_mapped_rev,...
+                                                                        physical_resource_mapping_DRS_cell,...
+                                                                        physical_resource_mapping_STF_cell,...
+                                                                        N_RX,...
+                                                                        N_eff_TX);
+            end
+
             %% PCC decoding and packet data extraction
             % Decode PCC and extract all relevant data about the packet.
             % We know N_eff_TX from STO sync, so we also know the DRS pattern.
@@ -169,16 +181,6 @@ classdef dect_rx < handle
             % PCC is always transmitted with transmit diversity coding.
             % For now it is done down below together with the PDC.
             % TODO
-
-            %% residual CFO correction post FFT based on averaging DRS symbols
-            if synchronization.drs.cfo_config.active_residual == true
-                antenna_streams_mapped_rev = lib_rx.sync_CFO_residual(  antenna_streams_mapped_rev,...
-                                                                        physical_resource_mapping_DRS_cell,...
-                                                                        physical_resource_mapping_STF_cell,...
-                                                                        N_RX,...
-                                                                        N_eff_TX,...
-                                                                        synchronization.drs.cfo_config);
-            end
                                                                                                                     
             %% channel estimation
             % Now that we know the length of the packet from the PCC, we can determine a channel estimate.

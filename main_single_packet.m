@@ -68,30 +68,30 @@ mac_meta_rx = mac_meta_tx;
 % number of antennas at the receiver
 mac_meta_rx.N_RX = 2;
 
-% Synchronization based on STF (typically link-layer-simulations do not include synchronization)
+% Synchronization before the FFT (i.e. in time domain) based on the STF:
 %
-% If synchronization is turned on (i.e. mac_meta_rx.synchronization.stf.active = true) the receiver class dect_rx will try to
-% synchronize a packet before decoding it. For that, the dect_rx member function demod_decode_packet(samples_antenna_rx) must
-% be called with samples_antenna_rx having more samples than samples_antenna_tx.
+% If synchronization before the FFT is turned on (i.e. mac_meta_rx.synchronization.pre_FFT.active = true), the receiver class
+% dect_rx will try to synchronize a packet before decoding it. For that, the dect_rx method demod_decode_packet(samples_antenna_rx)
+% must be called with samples_antenna_rx having more samples than samples_antenna_tx.
 %
-% If synchronization is turned off (i.e. mac_meta_rx.synchronization.stf.active = false) the dect_rx member
-% function demod_decode_packet(samples_antenna_rx) must be called with samples_antenna_rx having the exact same number
-% of samples as samples_antenna_tx, but not necessarily the same number of antennas (depends on MIMO mode).
+% If synchronization before the FFT is turned off (i.e. mac_meta_rx.synchronization.pre_FFT.active = false) the receiver class
+% dect_rx will NOT try to synchronize a packet before decoding it. For that, the dect_rx method demod_decode_packet(samples_antenna_rx)
+% must be called with samples_antenna_rx having the exact same number of samples as samples_antenna_tx.
 %
-mac_meta_rx.synchronization.stf.active = true;
-if mac_meta_rx.synchronization.stf.active == true
+mac_meta_rx.synchronization.pre_FFT.active = true;
+if mac_meta_rx.synchronization.pre_FFT.active == true
 
-    % STO (detection, coarse peak search, fine peak search)
-    mac_meta_rx.synchronization.stf.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
+    % symbol time offset (STO), i.e. detection, coarse peak search, fine peak search
+    mac_meta_rx.synchronization.pre_FFT.sto_config = lib_rx.sync_STO_param(mac_meta_tx.u, mac_meta_tx.b, mac_meta_tx.oversampling);
     
-    % CFO (fractional, integer)
-    mac_meta_rx.synchronization.stf.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
-    mac_meta_rx.synchronization.stf.cfo_config.active_fractional = true;
-    mac_meta_rx.synchronization.stf.cfo_config.active_integer = true;
+    % carrier frequency offset (CFO), i.e. fractional and integer CFO
+    mac_meta_rx.synchronization.pre_FFT.cfo_config = lib_rx.sync_CFO_param(mac_meta_tx.u);
+    mac_meta_rx.synchronization.pre_FFT.cfo_config.active_fractional = true;
+    mac_meta_rx.synchronization.pre_FFT.cfo_config.active_integer = true;
 end
 
-% synchronization of residual CFO based on DRS, not STF
-mac_meta_rx.synchronization.drs.cfo_config.active_residual = true;
+% synchronization in frequency domain based on STF and/or DRS
+mac_meta_rx.synchronization.post_FFT.cfo_residual = true;
 
 % create actual receiver
 rx = dect_rx(verbose, mac_meta_rx);
