@@ -123,7 +123,7 @@ classdef dect_rx < handle
             physical_resource_mapping_STF_cell = obj.phy_4_5.physical_resource_mapping_STF_cell;
             physical_resource_mapping_DRS_cell = obj.phy_4_5.physical_resource_mapping_DRS_cell;
 
-            %% sync of STO + CFO and extraction of N_eff_TX into STO_CFO_report
+            %% sync of STO + CFO in time domain before FFT, and extraction of N_eff_TX into STO_CFO_report
             if synchronization.pre_FFT.active == true
 
                 % The number of samples received is larger than the number of samples in a packet.
@@ -165,7 +165,20 @@ classdef dect_rx < handle
                                                                                                                             N_b_CP,...
                                                                                                                             oversampling);
 
+            %% we are now in frequency domain, remove residual STO post FFT based on STO
+            % Idea: delay in time domain leads to increasing phase rotation within an OFDM symbol, but steady across packet
+            if synchronization.post_FFT.sto_fractional == true
+                [antenna_streams_mapped_rev, sto_fractional] = lib_rx.sync_STO_fractional(antenna_streams_mapped_rev, physical_resource_mapping_STF_cell, N_RX, oversampling);
+
+                % add to report
+                obj.packet_data.STO_CFO_report.sto_fractional = sto_fractional;
+            else
+                % add empty
+                obj.packet_data.STO_CFO_report.sto_fractional = 0;
+            end
+
             %% residual CFO correction post FFT based on averaging DRS symbols
+            % Idea: CFO leads to steady phase rotation within OFDM symbol, but increasing phase rotation across packet
             if synchronization.post_FFT.cfo_residual == true
                 antenna_streams_mapped_rev = lib_rx.sync_CFO_residual(  antenna_streams_mapped_rev,...
                                                                         physical_resource_mapping_DRS_cell,...
@@ -294,6 +307,7 @@ classdef dect_rx < handle
                 noise_power_measurement = sum(abs(noise_power_measurement).^2)/numel(noise_power_measurement);
                 sinr = 10*log10(tx_power_measurement/noise_power_measurement);
                 fprintf('Measured f domain SINR: %f dB\n', sinr);
+                fprintf('Measured sto_fractional: %f samples\n', obj.packet_data.STO_CFO_report.sto_fractional);
 
                 if verbose_ > 1
                     lib_dbg.plot_chestim(ch_estim, obj.phy_4_5.numerology.n_guards_bottom, obj.phy_4_5.numerology.n_guards_top);

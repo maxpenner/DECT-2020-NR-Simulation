@@ -94,6 +94,7 @@ for mcs_index = mcs_index_vec
     end
     
     % synchronization in frequency domain based on STF and/or DRS
+    mac_meta_rx.synchronization.post_FFT.sto_fractional = false;
     mac_meta_rx.synchronization.post_FFT.cfo_residual = false;
 
     % create rx

@@ -91,6 +91,7 @@ if mac_meta_rx.synchronization.pre_FFT.active == true
 end
 
 % synchronization in frequency domain based on STF and/or DRS
+mac_meta_rx.synchronization.post_FFT.sto_fractional = true;
 mac_meta_rx.synchronization.post_FFT.cfo_residual = true;
 
 % create actual receiver
