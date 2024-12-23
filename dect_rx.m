@@ -180,10 +180,11 @@ classdef dect_rx < handle
                 obj.packet_data.STO_CFO_report.sto_fractional = 0;
             end
 
-            %% remove residual CFO correction based on DRS
+            %% remove residual CFO correction based on STF and DRS
             % Idea: CFO leads to steady phase rotation within an OFDM symbol, but increasing phase rotation across packet.
             % This is known as the common phase error (CPE).
             % Is a real receiver, a CPU can also be caused by phase noise.
+            % ToDo: add STF, currently based only on DRS
             if synchronization.post_FFT.cfo_residual == true
                 antenna_streams_mapped_rev = lib_rx.sync_CFO_residual(  antenna_streams_mapped_rev,...
                                                                         physical_resource_mapping_DRS_cell,...
