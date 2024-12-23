@@ -123,7 +123,7 @@ classdef dect_rx < handle
             physical_resource_mapping_STF_cell = obj.phy_4_5.physical_resource_mapping_STF_cell;
             physical_resource_mapping_DRS_cell = obj.phy_4_5.physical_resource_mapping_DRS_cell;
 
-            %% sync of STO + CFO in time domain before FFT, and extraction of N_eff_TX into STO_CFO_report
+            %% sync of integer STO and fractional + integer CFO in time domain before FFT, and extraction of N_eff_TX into STO_CFO_report
             if synchronization.pre_FFT.active == true
 
                 % The number of samples received is larger than the number of samples in a packet.
@@ -165,8 +165,11 @@ classdef dect_rx < handle
                                                                                                                             N_b_CP,...
                                                                                                                             oversampling);
 
-            %% we are now in frequency domain, remove residual STO post FFT based on STO
-            % Idea: delay in time domain leads to increasing phase rotation within an OFDM symbol, but steady across packet
+            %% remove fractional + residual STO based on STF and DRS
+            % Idea: Delay in time domain leads to increasing phase rotation within an OFDM symbol, but steady across packet.
+            % This is known as the phase error gradient (PEG).
+            % Residual STO may also be due to a Symbol Clock Offset (CFO).
+            % ToDo: add DRS, currently based only on STF
             if synchronization.post_FFT.sto_fractional == true
                 [antenna_streams_mapped_rev, sto_fractional] = lib_rx.sync_STO_fractional(antenna_streams_mapped_rev, physical_resource_mapping_STF_cell, N_RX, oversampling);
 
@@ -177,8 +180,10 @@ classdef dect_rx < handle
                 obj.packet_data.STO_CFO_report.sto_fractional = 0;
             end
 
-            %% residual CFO correction post FFT based on averaging DRS symbols
-            % Idea: CFO leads to steady phase rotation within OFDM symbol, but increasing phase rotation across packet
+            %% remove residual CFO correction based on DRS
+            % Idea: CFO leads to steady phase rotation within an OFDM symbol, but increasing phase rotation across packet.
+            % This is known as the common phase error (CPE).
+            % Is a real receiver, a CPU can also be caused by phase noise.
             if synchronization.post_FFT.cfo_residual == true
                 antenna_streams_mapped_rev = lib_rx.sync_CFO_residual(  antenna_streams_mapped_rev,...
                                                                         physical_resource_mapping_DRS_cell,...
